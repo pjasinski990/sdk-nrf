@@ -6,6 +6,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/gpio.h>
 
 #if defined(CONFIG_BT)
 #include "ble.h"
@@ -13,6 +14,9 @@
 
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
+
+#define LED0_NODE DT_ALIAS(led0)
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
 LOG_MODULE_REGISTER(cli_sample, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
 
@@ -65,6 +69,16 @@ void main(void)
 #endif
 
 	LOG_INF(WELLCOME_TEXT);
+
+	NVIC_SetPriority(DebugMonitor_IRQn, 7U);
+	if (!device_is_ready(led.port)) {
+		return;
+	}
+	int ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+	if (ret < 0) {
+		return;
+	}
+    gpio_pin_set_dt(&led, 0);
 
 #if CONFIG_BT
 	ble_enable();
