@@ -20,8 +20,6 @@
 
 LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
-
-
 int main(void)
 {
 	int ret = 0;
@@ -86,5 +84,6 @@ int main(void)
 
 err:
 	LOG_INF("Returning with error");
+
 	return ret;
 }

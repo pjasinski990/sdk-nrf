@@ -129,8 +129,8 @@ config NRF700X_UTIL
 	depends on SHELL
 	bool "Enable Utility shell in nRF700x driver"
 
-config NRF700X_BT_COEX
-	bool "Enable Wi-Fi Bluetooth coexistence support"
+config NRF700X_SR_COEX
+	bool "Enable Wi-Fi, SR (short range protocols) coexistence support"
 	depends on SOC_NRF5340_CPUAPP_QKAA
 	default y if SOC_NRF5340_CPUAPP_QKAA
 
