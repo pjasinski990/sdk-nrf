@@ -37,31 +37,14 @@ LOG_MODULE_REGISTER(thread_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 #include <zephyr_coex_struct.h>
 #include "thread_utils.h"
 #include "zephyr_fmac_main.h"
-#define MAX_SSID_LEN 32
+
 #define WIFI_CONNECTION_TIMEOUT 30 /* in seconds */
 #define WIFI_DHCP_TIMEOUT 10 /* in seconds */
 
-#define DEMARCATE_TEST_START
+#define DEMARCATE_TEST_START_END
 
 #define RSSI_INIT_VALUE 127
-
-#define HIGHEST_CHANNUM_24G 14
-
-#define KSLEEP_WIFI_CON_2SEC K_SECONDS(2)
-#define KSLEEP_WIFI_DISCON_2SEC K_SECONDS(2)
-#define KSLEEP_WIFI_CON_10MSEC K_MSEC(10)
-#define KSLEEP_WIFI_DISCON_10MSEC K_MSEC(10)
-#define KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC K_SECONDS(1)
-#define KSLEEP_WHILE_PERIP_CONN_CHECK_1SEC K_SECONDS(1)
-#define KSLEEP_ADV_START_1SEC K_SECONDS(1)
-#define KSLEEP_SCAN_START_1SEC K_SECONDS(1)
-
-
-
-static uint32_t wifi_scan_cnt_24g;
-static uint32_t wifi_scan_cnt_5g;
-extern uint32_t wifi_scan_cmd_cnt;
-
+#define KSLEEP_TEST_DUR_CHECK_1SEC K_SECONDS(1)
 
 static uint32_t wifi_conn_attempt_cnt;
 static uint32_t wifi_conn_success_cnt;
@@ -105,18 +88,18 @@ void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_ev
 /**
  * @brief Handle Wi-Fi management events
  *
- * @return No return value.
+ * @return None
  */
 void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
 		struct net_if *iface);
-static uint32_t scan_result_count;
+
 
 /**
  * @brief Thread throughtput test run
  *
  * @return None
  */
-void run_thread_benchmark(void);
+void thread_run_benchmark(void);
 
 
 /**
@@ -138,7 +121,7 @@ int config_pta(bool is_ant_mode_sep, bool is_thread_client,
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int run_wifi_traffic_udp(void);
+int wifi_run_udp_traffic(void);
 
 /**
  * @brief Start wi-fi traffic for zperf tcp upload or configure
@@ -146,18 +129,18 @@ int run_wifi_traffic_udp(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int run_wifi_traffic_tcp(void);
+int wifi_run_tcp_traffic(void);
 
 
 /**
- * @brief check if iperf traffic is complete
+ * @brief start Thread activity
  *
  * @return None
  */
-void start_thread_activity(void);
+void thread_start_activity(void);
 
 /**
- * @brief start Wi-Fi scan using thread start
+ * @brief start Wi-Fi activity using thread start
  *
  * @return None
  */
@@ -167,13 +150,13 @@ void start_wifi_activity(void);
  *
  * @return None
  */
-void check_wifi_traffic(void);
+void wifi_check_traffic_status(void);
 /**
  * @brief Run Thread traffic using thread join
  *
  * @return None
  */
-void run_thread_activity(void);
+void thread_run_activity(void);
 /**
  * @brief Disconnect Wi-Fi
  *
@@ -185,7 +168,7 @@ void wifi_disconnection(void);
  *
  * @return None
  */
-void exit_thread_throughput_test(void);
+void thread_exit_throughput_test(void);
 
 static struct {
 	uint8_t connected :1;
@@ -200,7 +183,7 @@ struct wifi_iface_status status = { 0 };
 
 K_THREAD_DEFINE(run_thread_traffic,
 	CONFIG_WIFI_THREAD_STACK_SIZE,
-	run_thread_benchmark,
+	thread_run_benchmark,
 	NULL,
 	NULL,
 	NULL,
@@ -209,75 +192,82 @@ K_THREAD_DEFINE(run_thread_traffic,
 	K_TICKS_FOREVER);
 
 /**
- * @brief Print Wi-Fi status
+ * @brief Print Wi-Fi command status
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int cmd_wifi_status(void);
+int wifi_command_status(void);
+
 /**
  * @brief Initailise Wi-Fi arguments in variables
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int __wifi_args_to_params(struct wifi_connect_req_params *params);
+
 /**
  * @brief Request Wi-Fi connection
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_connect(void);
+
 /**
  * @brief Request Wi-Fi disconnection
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_disconnect(void);
+
 /**
  * @brief parse Wi-Fi IPv4 address
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int parse_ipv4_addr(char *host, struct sockaddr_in *addr);
+int wifi_parse_ipv4_addr(char *host, struct sockaddr_in *addr);
+
 /**
  * @brief wait for next Wi-Fi event
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wait_for_next_event(const char *event_name, int timeout);
+
 /**
  * @brief Callback for UDP download results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
-void udp_download_results_cb(enum zperf_status status,
+void wifi_udp_download_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for UDP upload results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
-void udp_upload_results_cb(enum zperf_status status,
+void wifi_udp_upload_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for TCP download results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
-void tcp_download_results_cb(enum zperf_status status,
+void wifi_tcp_download_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for TCP upload results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
-void tcp_upload_results_cb(enum zperf_status status,
+void wifi_tcp_upload_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
-
-
 
 /**
  * @brief Callback for Wi-Fi DHCP IP address
@@ -285,4 +275,27 @@ void tcp_upload_results_cb(enum zperf_status status,
  * @return None
  */
 void print_dhcp_ip(struct net_mgmt_event_callback *cb);
+
+/**
+ * @brief Callback for Wi-Fi connection result
+ *
+ * @return None
+ */
+void wifi_handle_connect_result(struct net_mgmt_event_callback *cb);
+
+/**
+ * @brief Callback for Wi-Fi disconnection result
+ *
+ * @return None
+ */
+void wifi_handle_disconnect_result(struct net_mgmt_event_callback *cb);
+
+
+/**
+ * @brief Print common test parameters info
+ *
+ * @return None
+ */
+void print_common_test_params(bool is_ant_mode_sep, bool test_ble, bool test_wlan,
+	bool is_ble_central);
 #endif /* THREAD_COEX_TEST_FUNCTIONS_ */

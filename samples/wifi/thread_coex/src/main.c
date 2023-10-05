@@ -32,19 +32,13 @@ int main(void)
 	bool test_wlan = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
 	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_THREAD);
 
-#if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
-	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
-	bool thread_external_antenna = IS_ENABLED(CONFIG_THREAD_EXTERNAL_ANTENNA);
-#endif
-
-
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP))
 	BUILD_ASSERT("Shared antenna support is not available with nRF7002 shields");
 #endif
 
-	memset_context();
+	wifi_memset_context();
 	
 	wifi_net_mgmt_callback_functions();
 
@@ -55,7 +49,7 @@ int main(void)
 	#if defined(CONFIG_NRF700X_SR_COEX)
 		/* Configure SR side (nRF5340 side) switch in nRF7002 DK */
 		LOG_INF("Configure SR side (nRF5340 side) switch");
-		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep, thread_external_antenna);
+		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
 		if (ret != 0) {
 			LOG_ERR("Unable to configure SR side switch: %d", ret);
 			goto err;

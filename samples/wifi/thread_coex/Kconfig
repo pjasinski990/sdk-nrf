@@ -8,40 +8,7 @@ source "Kconfig.zephyr"
 
 menu "Nordic Coex sample"
 
-choice TEST_TYPE
-	prompt "Test type"
-	default TEST_TYPE_WLAN_THREAD
-
-config TEST_TYPE_WLAN_ONLY
-	bool "WLAN only"
-	help
-	  Enable WLAN only
-
-config TEST_TYPE_THREAD_ONLY
-	bool "Thread only"
-	help
-	  Enable Thread only
-
-config TEST_TYPE_WLAN_THREAD
-	bool "WLAN and Thread"
-	help
-	  Enable WLAN and Thread
-
-endchoice
-
-config TEST_TYPE_WLAN
-	bool "WLAN"
-	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_THREAD
-	select WIFI
-	help
-	  Enable WLAN
-
-config TEST_TYPE_THREAD
-	bool "Thread"
-	default y if TEST_TYPE_THREAD_ONLY || TEST_TYPE_WLAN_THREAD
-	help
-	  Enable Thread
-
+#------------------------------ Wi-Fi configurations
 config STA_SSID
 	string "SSID"
 	default "wifi_sr_coex_24"
@@ -108,31 +75,20 @@ config WIFI_ZPERF_PKT_SIZE
 
 config WIFI_ZPERF_RATE
 	int "rate in kbps"
-	default 10000
+	default 15000
 
-config THREAD_INTERVAL_MIN
-	int "Thread min connection interval. Each unit 1.25milliseconds"
-	default 80
 
-config THREAD_INTERVAL_MAX
-	int "Thread max connection interval. Each unit 1.25milliseconds"
-	default 80
 
 config WIFI_BAND_2PT4G
 	bool "Indicates if WLAN operating band is 2.4GHz or 5GHz"
 	default y
 
+#------------------------------ Thread configurations
 config THREAD_ROLE_CLIENT
 	bool "Thread device role"
 	default y
 
-config COEX_TEST_DURATION
-	int "test duration in milliseconds"
-	default 20000
 
-config COEX_SEP_ANTENNAS
-	bool "Control if the antennas are shared/serparate for SR (short range) and WLAN"
-	default y
 
 rsource "test/Kconfig"
 endmenu
