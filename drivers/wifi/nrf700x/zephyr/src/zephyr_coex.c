@@ -407,7 +407,7 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
-int nrf_wifi_config_sr_switch(bool antenna_mode, bool bt_external_antenna)
+int nrf_wifi_config_sr_switch(bool antenna_mode)
 {
 	int ret;
 
@@ -422,23 +422,16 @@ int nrf_wifi_config_sr_switch(bool antenna_mode, bool bt_external_antenna)
 		return -1;
 	}
 
-	
-	if (bt_external_antenna) {
-		gpio_pin_set_dt(&btrf_switch_spec, 0x1);
-		LOG_INF("Antenna used: External.\n");
-		LOG_INF("Antenna mode: Separate.\n");
-		LOG_INF("GPIO P1.10 set to 1\n");
+	if (antenna_mode) {
+		gpio_pin_set_dt(&btrf_switch_spec, 0x0);
+		LOG_INF("Antenna used: Chip. Separate antennas.\n");
+		LOG_INF("GPIO P1.10 set to 0\n");
 	} else {
-		if (antenna_mode) {
-			gpio_pin_set_dt(&btrf_switch_spec, 0x0);
-			LOG_INF("Antenna used: Chip. Separate antennas.\n");
-			LOG_INF("GPIO P1.10 set to 0\n");
-		} else {
-			gpio_pin_set_dt(&btrf_switch_spec, 0x1);
-			LOG_INF("Antenna used: Chip. Shared antenna.\n");
-			LOG_INF("GPIO P1.10 set to 1\n");
-		}
+		gpio_pin_set_dt(&btrf_switch_spec, 0x1);
+		LOG_INF("Antenna used: Chip. Shared antenna.\n");
+		LOG_INF("GPIO P1.10 set to 1\n");
 	}
+
 	//LOG_INF("Successfully configured GPIO P1.10\n");
 
 	return 0;
