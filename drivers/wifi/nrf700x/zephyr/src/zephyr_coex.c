@@ -424,15 +424,13 @@ int nrf_wifi_config_sr_switch(bool antenna_mode)
 
 	if (antenna_mode) {
 		gpio_pin_set_dt(&btrf_switch_spec, 0x0);
-		LOG_INF("Antenna used: Chip. Separate antennas.\n");
+		/* LOG_INF("Antenna used: Separate antennas."); */
 		LOG_INF("GPIO P1.10 set to 0\n");
 	} else {
 		gpio_pin_set_dt(&btrf_switch_spec, 0x1);
-		LOG_INF("Antenna used: Chip. Shared antenna.\n");
+		/* LOG_INF("Antenna used: Shared antenna."); */
 		LOG_INF("GPIO P1.10 set to 1\n");
 	}
-
-	//LOG_INF("Successfully configured GPIO P1.10\n");
 
 	return 0;
 }

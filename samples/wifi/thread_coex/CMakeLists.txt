@@ -23,4 +23,4 @@ target_include_directories(app PUBLIC
 	${ZEPHYR_BASE}/subsys/net/ip
 )
 
-zephyr_library_include_directories(${ZEPHYR_BASE}/samples/openthread)
+#zephyr_library_include_directories(${ZEPHYR_BASE}/samples/openthread)
