@@ -6,42 +6,48 @@
 
 menu "Nordic Coex sample - test"
 
-config WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT
-	bool "Indicates test is to be run or not"
-	default n
+#-------------------------------------- test parameters
+choice TEST_TYPE
+	prompt "Test type"
+	default TEST_TYPE_WLAN_THREAD
 
-config WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER
-	bool "Indicates test is to be run or not"
-	default n
+config TEST_TYPE_WLAN_ONLY
+	bool "WLAN only"
+	help
+	  Enable WLAN only
 
-config WIFI_TP_UDP_SERVER_THREAD_TP_CLIENT
-	bool "Indicates test is to be run or not"
-	default n
+config TEST_TYPE_THREAD_ONLY
+	bool "Thread only"
+	help
+	  Enable Thread only
 
-config WIFI_TP_UDP_SERVER_THREAD_TP_SERVER
-	bool "Indicates test is to be run or not"
-	default n
+config TEST_TYPE_WLAN_THREAD
+	bool "WLAN and Thread"
+	help
+	  Enable WLAN and Thread
 
-config WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT
-	bool "Indicates test is to be run or not"
-	default n
+endchoice
 
-config WIFI_TP_TCP_CLIENT_THREAD_TP_SERVER
-	bool "Indicates test is to be run or not"
-	default n
+config TEST_TYPE_WLAN
+	bool "WLAN"
+	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_THREAD
+	select WIFI
+	help
+	  Enable WLAN
 
-config WIFI_TP_TCP_SERVER_THREAD_TP_CLIENT
-	bool "Indicates test is to be run or not"
-	default n
+config TEST_TYPE_THREAD
+	bool "Thread"
+	default y if TEST_TYPE_THREAD_ONLY || TEST_TYPE_WLAN_THREAD
+	help
+	  Enable Thread
 
-config WIFI_TP_TCP_SERVER_THREAD_TP_SERVER
-	bool "Indicates test is to be run or not"
-	default n
+config COEX_TEST_DURATION
+	int "test duration in milliseconds"
+	default 20000
 
-#----------------------------------- Test parameters
-config THREAD_EXTERNAL_ANTENNA
-	bool "Indicates if external antenna used for Thread"
-	default n
+config COEX_SEP_ANTENNAS
+	bool "Control if the antennas are shared/serparate for Thread and WLAN"
+	default y
 
 config DEBUG_PRINT_WIFI_SCAN_INFO
 	bool "Print Wi-Fi Scan info for debug purpose"
@@ -59,7 +65,38 @@ config PRINTS_FOR_AUTOMATION
 	bool "Print info required for automation"
 	default y
 
-#-------------------------------------- Thread configs.
+#-------------------------------------- test cases
+config WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT
+	bool "Select to run UDP Wi-FI client and Thread client"
+	default n
+
+config WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER
+	bool "Select to run UDP Wi-FI client and Thread server"
+	default n
+
+config WIFI_TP_UDP_SERVER_THREAD_TP_CLIENT
+	bool "Select to run UDP Wi-FI server and Thread Client"
+	default n
+
+config WIFI_TP_UDP_SERVER_THREAD_TP_SERVER
+	bool "Select to run UDP Wi-FI server and Thread server"
+	default n
+
+config WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT
+	bool "Select to run TCP Wi-FI client and Thread Client"
+	default n
+
+config WIFI_TP_TCP_CLIENT_THREAD_TP_SERVER
+	bool "Select to run TCP Wi-FI client and Thread server"
+	default n
+
+config WIFI_TP_TCP_SERVER_THREAD_TP_CLIENT
+	bool "Select to run TCP Wi-FI server and Thread Client"
+	default n
+
+config WIFI_TP_TCP_SERVER_THREAD_TP_SERVER
+	bool "Select to run TCP Wi-FI server and Thread server"
+	default n
 
 
 endmenu

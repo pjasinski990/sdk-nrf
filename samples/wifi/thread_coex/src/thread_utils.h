@@ -7,7 +7,7 @@
 #ifndef THREAD_UTILS_H_
 #define THREAD_UTILS_H_
 
-#include <stdint.h>
+
 #include <stdbool.h>
 
 /**

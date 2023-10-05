@@ -38,51 +38,16 @@ int wifi_tput_thread_tput(bool test_wlan, bool is_ant_mode_sep, bool test_thread
 		bool is_thread_client, bool is_wlan_server, bool is_zperf_udp);
 
 /**
- * @brief memset_context
+ * @brief wifi_memset_context
  *
  * @return No return value.
  */
-void memset_context(void);
-/**
- * @brief Callback for Wi-Fi connection result
- *
- * @return No return value.
- */
-void handle_wifi_connect_result(struct net_mgmt_event_callback *cb);
+void wifi_memset_context(void);
 
 /**
- * @brief Callback for Wi-Fi disconnection result
+ * @brief Handle net management callbacks
  *
  * @return No return value.
  */
-void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi scan result
- *
- * @return No return value.
- */
-void handle_wifi_scan_result(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi scan done
- *
- * @return No return value.
- */
-void handle_wifi_scan_done(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi DHCP IP addreds assigned
- *
- * @return No return value.
- */
-void print_dhcp_ip(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Print common test parameters info
- *
- * @return None
- */
-void print_common_test_params(bool is_ant_mode_sep, bool test_thread, bool test_wlan,
-	bool is_thread_client);
+void wifi_net_mgmt_callback_functions(void);
 #endif /* MAIN_H_ */
