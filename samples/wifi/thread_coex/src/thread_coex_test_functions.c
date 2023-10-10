@@ -466,7 +466,7 @@ int wifi_run_tcp_traffic(void)
 	int ret = 0;
 
 #ifdef CONFIG_WIFI_ZPERF_SERVER
-	struct zperf_download_params params;
+	struct zperf_download_params params = {0};
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
@@ -477,7 +477,7 @@ int wifi_run_tcp_traffic(void)
 	}
 	LOG_INF("TCP server started on port %u\n", params.port);
 #else
-	struct zperf_upload_params params;
+	struct zperf_upload_params params = {0};
 	/* Start Wi-Fi TCP traffic */
 	LOG_INF("Starting Wi-Fi benchmark: Zperf TCP client");
 	params.duration_ms = CONFIG_COEX_TEST_DURATION;
@@ -503,7 +503,7 @@ int wifi_run_udp_traffic(void)
 	int ret = 0;
 
 #ifdef CONFIG_WIFI_ZPERF_SERVER
-	struct zperf_download_params params;
+	struct zperf_download_params params = {0};
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
@@ -513,7 +513,7 @@ int wifi_run_udp_traffic(void)
 		return ret;
 	}
 #else
-	struct zperf_upload_params params;
+	struct zperf_upload_params params = {0};
 
 	/* Start Wi-Fi UDP traffic */
 	LOG_INF("Starting Wi-Fi benchmark: Zperf UDP client");
