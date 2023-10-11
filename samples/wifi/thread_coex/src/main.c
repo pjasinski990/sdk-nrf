@@ -24,17 +24,24 @@
 
 LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
-uint32_t state_check_delay = 60;
+/* To check if the OT device role is as expected */
+char* ot_state                   = "router"; /* set to "leader" or "router"*/
+uint32_t ot_state_chk_iteration  = 0;
+uint32_t total_duration_to_check = 120; /* seconds */
+uint32_t time_gap_between_checks = 5; /* seconds */
+uint32_t max_iterations          = 1;
+uint32_t ret_strcmp              = 1; /* set to non-zero */
+bool is_ot_state_matched         = false;
 
 int main(void)
 {
 	int ret = 0;
-	bool is_ant_mode_sep = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
+	bool is_ant_mode_sep  = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
 	bool is_thread_client = IS_ENABLED(CONFIG_THREAD_ROLE_CLIENT);
-	bool is_wlan_server = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
-	bool is_zperf_udp = IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP);
-	bool test_wlan = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
-	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_THREAD);
+	bool is_wlan_server   = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
+	bool is_zperf_udp     = IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP);
+	bool test_wlan        = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
+	bool test_thread      = IS_ENABLED(CONFIG_TEST_TYPE_THREAD);
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -75,20 +82,42 @@ int main(void)
 	k_sleep(K_SECONDS(3));
 	
 	LOG_INF("Waiting for OT discover to complete");
-	while(1) {
-		if(is_ot_discovery_done) {
+	while (1) {
+		if (is_ot_discovery_done) {
 			break;
 		} 
 	}
+	LOG_INF("OT discover complete");
+
+	/* check OT device state periodically until the expected state is found */
+	max_iterations = total_duration_to_check/time_gap_between_checks;	
+	LOG_INF("Check OT device state for every %d seconds..", time_gap_between_checks);
+	LOG_INF("until the expected state is found (or) timeout of %d seconds", total_duration_to_check);
 	
+	LOG_INF("OT device expected state %s", ot_state);
+	while(1) {
+		ot_state_chk_iteration++;
+		/* LOG_INF("ot_state_chk_iteration: %d",ot_state_chk_iteration); */
+		ret_strcmp = strcmp(ot_state, check_ot_state());
+
+		/* exit when OT device role matches the expected state (or) timeout */
+		if (ret_strcmp == 0) {
+			is_ot_state_matched = true;
+			break;
+		}
+		if (ot_state_chk_iteration >= max_iterations) {
+			is_ot_state_matched = false;
+			break;
+		}
+		k_sleep(K_SECONDS(time_gap_between_checks));	
+	}	
+	if (is_ot_state_matched == true) {
+		LOG_INF("OT device state matched with the expected role");
+	} else {
+		LOG_ERR("OT device state NOT matched with the expected role");
+	}
+	k_sleep(K_SECONDS(3));
 	thread_throughput_test_exit();
-
-	LOG_INF("Wait for %d seconds before checking the OT device state",state_check_delay);
-	k_sleep(K_SECONDS(state_check_delay));	
-
-	/* check OT device state */
-	check_ot_state();
-
 
 	LOG_INF("exiting the test after open thread discovery");
 	goto end_of_main;

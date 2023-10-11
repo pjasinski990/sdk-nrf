@@ -36,6 +36,7 @@ int thread_throughput_test_exit(void);
  *
  * @return None.
  */
-void check_ot_state(void);
-	
+const char* check_ot_state(void);
+
+
 #endif /* THREAD_UTILS_H_ */
