@@ -15,10 +15,16 @@
 
 #include "main.h"
 #include <nrfx_clock.h>
+
 #include "zephyr_fmac_main.h"
 #include <zephyr/logging/log.h>
 
+
+#include "thread_utils.h"
+
 LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
+
+uint32_t state_check_delay = 60;
 
 int main(void)
 {
@@ -40,7 +46,6 @@ int main(void)
 	
 	wifi_net_mgmt_callback_functions();
 
-	
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
@@ -65,6 +70,29 @@ int main(void)
 	}
 #endif /* CONFIG_NRF700X_SR_COEX */
 
+	thread_throughput_test_init(false);
+	
+	k_sleep(K_SECONDS(3));
+	
+	LOG_INF("Waiting for OT discover to complete");
+	while(1) {
+		if(is_ot_discovery_done) {
+			break;
+		} 
+	}
+	
+	thread_throughput_test_exit();
+
+	LOG_INF("Wait for %d seconds before checking the OT device state",state_check_delay);
+	k_sleep(K_SECONDS(state_check_delay));	
+
+	/* check OT device state */
+	check_ot_state();
+
+
+	LOG_INF("exiting the test after open thread discovery");
+	goto end_of_main;
+	
 	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER) ||
@@ -84,6 +112,8 @@ int main(void)
 
 err:
 	LOG_INF("Returning with error");
+
+end_of_main:
 
 	return ret;
 }

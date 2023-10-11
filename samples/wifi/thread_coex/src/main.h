@@ -27,7 +27,7 @@
 
 #include <zephyr_coex.h>
 
-
+uint8_t is_ot_discovery_done;
 
 /**
  * @brief Function to test Wi-Fi throughput client/server and Thread throughput client/server
