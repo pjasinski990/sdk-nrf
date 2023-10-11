@@ -31,4 +31,11 @@ int thread_throughput_test_run(void);
  */
 int thread_throughput_test_exit(void);
 
+/**
+ * @brief Check state of the thread device
+ *
+ * @return None.
+ */
+void check_ot_state(void);
+	
 #endif /* THREAD_UTILS_H_ */
