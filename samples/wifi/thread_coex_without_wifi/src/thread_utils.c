@@ -27,8 +27,7 @@
 
 extern uint8_t is_ot_discovery_done;
 
-static void setNetworkConfiguration(otInstance *aInstance)
-{
+static void setNetworkConfiguration(otInstance *aInstance) {
 	static char          aNetworkName[] = "TestNetwork";
     otOperationalDataset aDataset;
 
@@ -86,18 +85,16 @@ int thread_throughput_test_run(void)
 	return 0;
 }
 
-void handle_active_scan_result(struct otActiveScanResult *result, void *context)
-{
+void handle_active_scan_result(struct otActiveScanResult *result, void *context) {
 	if (!result) {
 		return;
 	}
-	LOG_INF("----------------------------------");
-	LOG_INF("Discovered Thread network details");
+	LOG_INF("------------------ FOUND NETWORK ------------------");
 	LOG_INF("name: %-16s", result->mNetworkName.m8);
 	LOG_INF("panid: %04x", result->mPanId);
 	LOG_INF("channel: %2u", result->mChannel);
 	LOG_INF("rssi: %3d", result->mRssi);
-	LOG_INF("----------------------------------");
+	LOG_INF("---------------------------------------------------");
 	
 	is_ot_discovery_done = 1;
 }
@@ -106,21 +103,20 @@ int thread_throughput_test_init(bool is_thread_client)
 {
 	struct openthread_context *context = openthread_get_default_context();
 	otInstance *instance = openthread_get_default_instance();
-	LOG_INF("Updating thread parameters");
+	LOG_INF("updating thread parameters");
 	setNetworkConfiguration(instance);
-	LOG_INF("Enabling thread");
-	
-	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
-	/* otThreadSetEnabled(instance, true); */ /* cli `thread start` */	
+	LOG_INF("enabling thread");
 	otError err = openthread_start(context);	// 'ifconfig up && thread start'
 	if (err != OT_ERROR_NONE) {
-		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		LOG_ERR("starting openthread: %d (%s)", err, otThreadErrorToString(err));
 	}
+	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
+	/* otThreadSetEnabled(instance, true); */ /* cli `thread start` */
 
 	otDeviceRole current_role = otThreadGetDeviceRole(instance);
-	LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
+	LOG_INF("current role: %s", otThreadDeviceRoleToString(current_role));
 
-	LOG_INF("Performing Thread discover");
+	LOG_INF("performing discover");
 	openthread_api_mutex_lock(context);
 	otThreadDiscover(openthread_get_default_instance(), 0 /* all channels */,
 		OT_PANID_BROADCAST, false, false, handle_active_scan_result, NULL);
@@ -130,10 +126,9 @@ int thread_throughput_test_init(bool is_thread_client)
 }
 
 
-const char* check_ot_state()
-{
+const char* check_ot_state() {
 	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
+	/* LOG_INF("Current state: %s", otThreadDeviceRoleToString(current_role)); */
 	return(otThreadDeviceRoleToString(current_role));
 }
 

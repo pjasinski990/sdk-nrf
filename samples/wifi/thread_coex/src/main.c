@@ -36,12 +36,12 @@ bool is_ot_state_matched         = false;
 int main(void)
 {
 	int ret = 0;
-	bool is_ant_mode_sep  = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
+	bool is_ant_mode_sep = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
 	bool is_thread_client = IS_ENABLED(CONFIG_THREAD_ROLE_CLIENT);
-	bool is_wlan_server   = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
-	bool is_zperf_udp     = IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP);
-	bool test_wlan        = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
-	bool test_thread      = IS_ENABLED(CONFIG_TEST_TYPE_THREAD);
+	bool is_wlan_server = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
+	bool is_zperf_udp = IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP);
+	bool test_wlan = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
+	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_THREAD);
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -49,39 +49,40 @@ int main(void)
 	BUILD_ASSERT("Shared antenna support is not available with nRF7002 shields");
 #endif
 
+#if 0
 	wifi_memset_context();
 	
 	wifi_net_mgmt_callback_functions();
 
+	#if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
+		defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
+		#if defined(CONFIG_NRF700X_SR_COEX)
+			/* Configure SR side (nRF5340 side) switch in nRF7002 DK */
+			LOG_INF("Configure SR side (nRF5340 side) switch");
+			ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
+			if (ret != 0) {
+				LOG_ERR("Unable to configure SR side switch: %d", ret);
+				goto err;
+			}
+		#endif /* CONFIG_NRF700X_SR_COEX */
+	#endif
 
-#if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
-	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
 	#if defined(CONFIG_NRF700X_SR_COEX)
-		/* Configure SR side (nRF5340 side) switch in nRF7002 DK */
-		LOG_INF("Configure SR side (nRF5340 side) switch");
-		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
+		/* Configure non-PTA registers of Coexistence Hardware */
+		LOG_INF("Configuring non-PTA registers.");
+		ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
 		if (ret != 0) {
-			LOG_ERR("Unable to configure SR side switch: %d", ret);
+			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
 			goto err;
 		}
 	#endif /* CONFIG_NRF700X_SR_COEX */
 #endif
 
-#if defined(CONFIG_NRF700X_SR_COEX)
-	/* Configure non-PTA registers of Coexistence Hardware */
-	LOG_INF("Configuring non-PTA registers.");
-	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
-	if (ret != 0) {
-		LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
-		goto err;
-	}
-#endif /* CONFIG_NRF700X_SR_COEX */
-
 	thread_throughput_test_init(false);
 	
 	k_sleep(K_SECONDS(3));
 	
-	LOG_INF("Waiting for OT discover to complete");
+	/* LOG_INF("Waiting for OT discover to complete"); */
 	while (1) {
 		if (is_ot_discovery_done) {
 			break;
@@ -119,9 +120,10 @@ int main(void)
 	k_sleep(K_SECONDS(3));
 	thread_throughput_test_exit();
 
-	LOG_INF("exiting the test after open thread discovery");
+	LOG_INF("Exiting the test after open thread discovery");
 	goto end_of_main;
-	
+
+#if 0	
 	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER) ||
@@ -141,6 +143,7 @@ int main(void)
 
 err:
 	LOG_INF("Returning with error");
+#endif
 
 end_of_main:
 
