@@ -208,7 +208,7 @@ const uint32_t ch_config_sep[] = {
 
 int nrf_wifi_coex_config_non_pta(bool antenna_mode)
 {
-	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_coex_ch_configuration params  = { 0 };
 	const uint32_t *config_buffer_ptr = NULL;
 	uint32_t start_offset = 0;
@@ -255,7 +255,7 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 							bool antenna_mode,
 							bool ble_role, bool wlan_role)
 {
-	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_coex_ch_configuration params  = { 0 };
 	const uint16_t *config_buffer_ptr = NULL;
 	uint32_t start_offset = 0;
@@ -323,10 +323,10 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 
 	cmd_len = (COEX_CONFIG_FIXED_PARAMS + num_reg_to_config) * sizeof(uint32_t);
 
-	status = wifi_nrf_fmac_conf_btcoex(rpu_ctx->rpu_ctx,
+	status = nrf_wifi_fmac_conf_btcoex(rpu_ctx->rpu_ctx,
 					   (void *)(&params), cmd_len);
 
-	if (status != WIFI_NRF_STATUS_SUCCESS) {
+	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		return -1;
 	}
 	/* SR window */
@@ -358,10 +358,10 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 
 	cmd_len = (COEX_CONFIG_FIXED_PARAMS + num_reg_to_config) * sizeof(uint32_t);
 
-	status = wifi_nrf_fmac_conf_btcoex(rpu_ctx->rpu_ctx,
+	status = nrf_wifi_fmac_conf_btcoex(rpu_ctx->rpu_ctx,
 					   (void *)(&params), cmd_len);
 
-	if (status != WIFI_NRF_STATUS_SUCCESS) {
+	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		return -1;
 	}
 
@@ -438,7 +438,7 @@ int nrf_wifi_config_sr_switch(bool antenna_mode)
 
 int nrf_wifi_coex_hw_reset(void)
 {
-	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_coex_ch_configuration params  = { 0 };
 	uint32_t num_reg_to_config = 1;
 	uint32_t start_offset = 0;
