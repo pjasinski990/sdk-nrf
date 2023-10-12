@@ -43,7 +43,6 @@ int main(void)
 #endif
 
 	wifi_memset_context();
-	
 	wifi_net_mgmt_callback_functions();
 
 
@@ -71,44 +70,43 @@ int main(void)
 #endif /* CONFIG_NRF700X_SR_COEX */
 
 	thread_throughput_test_init(false);
-	
-	k_sleep(K_SECONDS(3));
-	
-	LOG_INF("Waiting for OT discover to complete");
-	while(1) {
-		if(is_ot_discovery_done) {
-			break;
-		} 
-	}
-	
-	thread_throughput_test_exit();
 
-	LOG_INF("Wait for %d seconds before checking the OT device state",state_check_delay);
-	k_sleep(K_SECONDS(state_check_delay));	
+	// k_sleep(K_SECONDS(3));
 
-	/* check OT device state */
-	check_ot_state();
+	// LOG_INF("Waiting for OT discover to complete");
+	// while(1) {
+	// 	k_sleep(K_MSEC(500));
+	// 	if(is_ot_discovery_done) {
+	// 		break;
+	// 	}
+	// }
+
+	// LOG_INF("Wait for %d seconds before checking the OT device state",state_check_delay);
+	// k_sleep(K_SECONDS(state_check_delay));
+
+	// /* check OT device state */
+	// check_ot_state();
 
 
-	LOG_INF("exiting the test after open thread discovery");
-	goto end_of_main;
-	
-	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT) ||
-	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT) ||
-	IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER) ||
-	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_SERVER) ||
-	IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_THREAD_TP_CLIENT) ||
-	IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_THREAD_TP_CLIENT) ||
-	IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_THREAD_TP_SERVER) ||
-	IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_THREAD_TP_SERVER)) {
-		ret = wifi_tput_thread_tput(test_wlan, is_ant_mode_sep,
-		test_thread, is_thread_client, is_wlan_server, is_zperf_udp);
-	}
-	if (ret != 0) {
-		LOG_INF("Test case failed");
-		goto err;
-	}
-	return 0;
+	// LOG_INF("exiting the test after open thread discovery");
+	// goto end_of_main;
+
+	// if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_SERVER) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_THREAD_TP_CLIENT) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_THREAD_TP_CLIENT) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_THREAD_TP_SERVER) ||
+	// IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_THREAD_TP_SERVER)) {
+	// 	ret = wifi_tput_thread_tput(test_wlan, is_ant_mode_sep,
+	// 	test_thread, is_thread_client, is_wlan_server, is_zperf_udp);
+	// }
+	// if (ret != 0) {
+	// 	LOG_INF("Test case failed");
+	// 	goto err;
+	// }
+	// return 0;
 
 err:
 	LOG_INF("Returning with error");
