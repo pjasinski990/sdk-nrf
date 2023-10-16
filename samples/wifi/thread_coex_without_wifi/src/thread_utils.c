@@ -44,7 +44,7 @@ static void setNetworkConfiguration(otInstance *aInstance) {
     aDataset.mComponents.mIsActiveTimestampPresent = true;
 
     /* Set Channel */
-    aDataset.mChannel                      = CONFIG_OT_CHANNEL;
+    aDataset.mChannel                      = 20;
     aDataset.mComponents.mIsChannelPresent = true;
 
     /* Set Pan ID */
@@ -59,7 +59,9 @@ static void setNetworkConfiguration(otInstance *aInstance) {
 
     /* Set network key */
     /* uint8_t key[OT_NETWORK_KEY_SIZE] = {0x12, 0x34, 0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34, 0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34, 0xC0, 0xDE}; */
-    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
+    // uint8_t key[OT_NETWORK_KEY_SIZE] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
+    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+
     memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
     aDataset.mComponents.mIsNetworkKeyPresent = true;
 
@@ -95,7 +97,7 @@ void handle_active_scan_result(struct otActiveScanResult *result, void *context)
 	LOG_INF("channel: %2u", result->mChannel);
 	LOG_INF("rssi: %3d", result->mRssi);
 	LOG_INF("---------------------------------------------------");
-	
+
 	is_ot_discovery_done = 1;
 }
 
@@ -113,14 +115,14 @@ int thread_throughput_test_init(bool is_thread_client)
 	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
 	/* otThreadSetEnabled(instance, true); */ /* cli `thread start` */
 
-	otDeviceRole current_role = otThreadGetDeviceRole(instance);
-	LOG_INF("current role: %s", otThreadDeviceRoleToString(current_role));
+	/*otDeviceRole current_role = otThreadGetDeviceRole(instance);*/
+	/*LOG_INF("current role: %s", otThreadDeviceRoleToString(current_role));*/
 
-	LOG_INF("performing discover");
-	openthread_api_mutex_lock(context);
-	otThreadDiscover(openthread_get_default_instance(), 0 /* all channels */,
-		OT_PANID_BROADCAST, false, false, handle_active_scan_result, NULL);
-	openthread_api_mutex_unlock(openthread_get_default_context());
+	/*LOG_INF("performing discover");*/
+	/*openthread_api_mutex_lock(context);*/
+	/*otThreadDiscover(openthread_get_default_instance(), 0 [> all channels <],*/
+		/*OT_PANID_BROADCAST, false, false, handle_active_scan_result, NULL);*/
+	/*openthread_api_mutex_unlock(openthread_get_default_context());*/
 
 	return 0;
 }
