@@ -30,8 +30,8 @@ endchoice
 
 config TEST_TYPE_WLAN
 	bool "WLAN"
-	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_THREAD
-	select WIFI
+#	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_THREAD
+#	select WIFI
 	help
 	  Enable WLAN
 

@@ -88,7 +88,7 @@ config THREAD_ROLE_CLIENT
 
 config OT_CHANNEL
 	int "Open thread operating channel"
-	default 11
+	default 18
 
 config OT_PAN_ID
 	int "Open thread PAN ID"
