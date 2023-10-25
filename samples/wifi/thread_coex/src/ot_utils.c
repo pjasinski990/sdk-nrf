@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-//----------------------------- thread 
+//==================================================================================== thread 
 #include <assert.h>
 #include <inttypes.h>
-#include "thread_utils.h"
+
 #include "zephyr/net/openthread.h"
 
 #include <openthread/config.h>
@@ -22,14 +22,13 @@
 #include <openthread/thread.h>
 
 //extern uint8_t is_ot_discovery_done;
-uint8_t is_ot_discovery_done;
+//uint8_t is_ot_discovery_done;
 //-----------------------------
 
 #include <string.h>
 #include <stdlib.h>
 
-
-#include "bt_utils.h"
+#include "ot_utils.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(bt_utils, CONFIG_LOG_DEFAULT_LEVEL);
@@ -56,6 +55,8 @@ LOG_MODULE_REGISTER(bt_utils, CONFIG_LOG_DEFAULT_LEVEL);
 #else
 	#define BLE_TX_PWR_CTRL_RSSI
 #endif
+
+uint32_t repeat_ot_discovery;
 
 uint32_t ot_discov_success_cnt;
 uint32_t ot_discov_attempt_cnt;
@@ -786,7 +787,7 @@ static const struct bt_throughput_cb throughput_cb = {
 	.data_send = throughput_send
 };
 
-int bt_throughput_test_init(bool is_ble_central)
+int bt_throughput_test_init(bool is_ot_client)
 {
 	int err;
 	int64_t stamp;
@@ -808,7 +809,7 @@ int bt_throughput_test_init(bool is_ble_central)
 
 	buttons_init();
 
-	select_role(is_ble_central);
+	select_role(is_ot_client);
 
 	/**
 	 *LOG_INF("Waiting for connection.");
@@ -852,7 +853,7 @@ int bt_throughput_test_init(bool is_ble_central)
 
 
 
-int bt_connection_init(bool is_ble_central)
+int bt_connection_init(bool is_ot_client)
 {
 	int err;
 	int64_t stamp;
@@ -875,7 +876,7 @@ int bt_connection_init(bool is_ble_central)
 	 */
 	buttons_init();
 
-	select_role(is_ble_central);
+	select_role(is_ot_client);
 
 	/**
 	 *LOG_INF("Waiting for connection.");
@@ -1072,49 +1073,28 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.le_data_len_updated = le_data_length_updated
 };
 
-//-------------------------------------------------------------- Thread 
+//=========================================================================================== Thread 
 
-void bt_conn_test_run(void)
+void ot_conn_test_run(void)
 {
-
-	int64_t stamp;
-	int64_t delta;
+	int64_t test_start_time;
 	int err = 0;
 	/* get cycle stamp */
-	stamp = k_uptime_get_32();
-
-	delta = 0;
-	/**After the disconnection in loop, scan_start() in disconnected() will take of
-	 * repeting scan starts until the end of test duration.
-	 */
-	//ot_discov_attempt_cnt++;
-	//scan_start();
+	test_start_time = k_uptime_get_32();
+	
+	ot_discov_attempt_cnt++;
+	/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
+	open_thread_discover_start();
+	
 	while (true) {
-		/* start scan to attempt a new connection, if BLE is not connected */
-		//if (ble_discon_no_conn != 0) {
-		//	ble_discon_no_conn = 0;
-		//	ot_discov_attempt_cnt++;
-		//	//scan_start();
-		//	
-		//}
-		ot_discov_attempt_cnt++;
-		open_thread_discover_start();
-		err = k_sem_take(&open_thread_disc_sem, WAIT_TIME_FOR_OT_DISC);
-		if (err) {
-			ot_discov_timeout++;
-			//LOG_INF("OT discovery timeout");
-			//return err; // commented as count is available
-		}
-		
-		//thread_throughput_test_init(true);
-		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
+		if (k_uptime_get_32() - test_start_time > CONFIG_COEX_TEST_DURATION) {
 			break;
 		}
-		//k_sleep(K_SECONDS(1)); // can be commented ?
-		
-		
+		k_sleep(K_MSEC(100)); /* in milliseconds. can be reduced to 1ms?? */
 	}
 }
+
+
 static void setNetworkConfiguration(otInstance *aInstance)
 {
 	static char          aNetworkName[] = "TestNetwork";
@@ -1161,28 +1141,24 @@ static void setNetworkConfiguration(otInstance *aInstance)
     otDatasetSetActive(aInstance, &aDataset);
 }
 
-void handle_active_scan_result(struct otActiveScanResult *result, void *context)
+
+void ot_handle_active_discov_result(struct otActiveScanResult *result, void *context)
 {
 	if (!result) {
 		ot_discov_no_result_cnt++;
-		return;
+	} else {
+		/* LOG_INF("panid: %04x channel: %2u rssi: %3d",result->mPanId, result->mChannel, result->mRssi); */
+	
+		ot_discov_success_cnt++;
 	}
-#if 0
-	LOG_INF("----------------------------------");
-	LOG_INF("Discovered Thread network details");
-	LOG_INF("name: %-16s", result->mNetworkName.m8);
-	LOG_INF("panid: %04x", result->mPanId);
-	LOG_INF("channel: %2u", result->mChannel);
-	LOG_INF("rssi: %3d", result->mRssi);
-	LOG_INF("----------------------------------");
-#else
-	LOG_INF("panid: %04x channel: %2u rssi: %3d",result->mPanId, result->mChannel, result->mRssi);
-#endif
 	
-	is_ot_discovery_done = 1; // can be commented
-	ot_discov_success_cnt++;
-	
-	k_sem_give(&open_thread_disc_sem);
+	/* LOG_INF("repeat_ot_discovery: %3d",repeat_ot_discovery); */
+	if (repeat_ot_discovery == 1) {
+		ot_discov_attempt_cnt++;
+		/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
+		open_thread_discover_start();
+	}
+	k_sleep(K_MSEC(30));	
 }
 
 int thread_throughput_test_init(bool is_thread_client)
@@ -1203,14 +1179,6 @@ int thread_throughput_test_init(bool is_thread_client)
 	otDeviceRole current_role = otThreadGetDeviceRole(instance);
 	LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
 
-#if 0
- // moved to a different function
-	LOG_INF("Performing Thread discover");
-	openthread_api_mutex_lock(context);
-	otThreadDiscover(openthread_get_default_instance(), 0 /* all channels */,
-		OT_PANID_BROADCAST, false, false, handle_active_scan_result, NULL);
-	openthread_api_mutex_unlock(openthread_get_default_context());
-#endif
 	return 0;
 }
 
@@ -1221,7 +1189,7 @@ void open_thread_discover_start(void) {
 	/* LOG_INF("Performing Thread discover"); */
 	openthread_api_mutex_lock(context);
 	otThreadDiscover(openthread_get_default_instance(), 0 /* all channels */,
-		OT_PANID_BROADCAST, false, false, handle_active_scan_result, NULL);
+		OT_PANID_BROADCAST, false, false, ot_handle_active_discov_result, NULL);
 	openthread_api_mutex_unlock(openthread_get_default_context());
 }
 const char* check_ot_state()

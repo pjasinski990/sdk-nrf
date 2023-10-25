@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef BT_COEX_TEST_FUNCTIONS_
-#define BT_COEX_TEST_FUNCTIONS_
+#ifndef OT_COEX_TEST_FUNCTIONS_
+#define OT_COEX_TEST_FUNCTIONS_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +37,9 @@ LOG_MODULE_REGISTER(bt_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 #include "net_private.h"
 #include <zephyr_coex.h>
 #include <zephyr_coex_struct.h>
-#include "bt_utils.h"
+
+#include "ot_utils.h" 
+
 #include "zephyr_fmac_main.h"
 #define MAX_SSID_LEN 32
 #define WIFI_CONNECTION_TIMEOUT 30 /* in seconds */
@@ -61,6 +63,7 @@ LOG_MODULE_REGISTER(bt_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 #define KSLEEP_SCAN_START_1SEC K_SECONDS(1)
 #define KSLEEP_WHILE_DISCON_CENTRAL_2SEC K_SECONDS(2)
 
+extern uint32_t repeat_ot_discovery;
 
 static uint32_t wifi_scan_cnt_24g;
 static uint32_t wifi_scan_cnt_5g;
@@ -181,8 +184,8 @@ int wifi_connection(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int config_pta(bool is_ant_mode_sep, bool is_ble_central,
-				bool is_wlan_server);
+int config_pta(bool is_ant_mode_sep, bool is_ot_client,
+				bool is_wifi_server);
 /**
  * @brief Start wi-fi traffic for zperf udp upload or configure
  * zperf traffic for udp download
@@ -204,7 +207,7 @@ int run_wifi_traffic_tcp(void);
  *
  * @return None
  */
-void start_ble_activity(void);
+void start_ot_activity(void);
 
 /**
  * @brief start Wi-Fi scan using thread start
@@ -224,7 +227,7 @@ void check_wifi_traffic(void);
  *
  * @return None
  */
-void run_ble_activity(void);
+void run_ot_activity(void);
 /**
  * @brief Disconnect Wi-Fi
  *
@@ -502,14 +505,14 @@ void print_dhcp_ip(struct net_mgmt_event_callback *cb);
  *
  * @return None
  */
-void print_common_test_params(bool is_ant_mode_sep, bool test_ble, bool test_wlan,
-	bool is_ble_central);
+void print_common_test_params(bool is_ant_mode_sep, bool test_openThread, bool test_wifi,
+	bool is_ot_client);
 /**
  * @brief Print BLE connection test parameters info
  *
  * @return None
  */
-void print_ble_connection_test_params(bool is_ble_central);
+void print_ble_connection_test_params(bool is_ot_client);
 
 #ifdef CONFIG_TWT_ENABLE
 	/**
@@ -545,4 +548,4 @@ void print_ble_connection_test_params(bool is_ble_central);
 				     uint64_t twt_interval);
 #endif
 
-#endif /* BT_COEX_TEST_FUNCTIONS_ */
+#endif /* OT_COEX_TEST_FUNCTIONS_ */

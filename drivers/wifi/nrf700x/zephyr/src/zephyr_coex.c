@@ -19,7 +19,7 @@
 #include "zephyr_fmac_main.h"
 #include "fmac_api.h"
 
-//LOG_MODULE_DECLARE(nrf_wifi, CONFIG_WIFI_LOG_LEVEL);
+LOG_MODULE_DECLARE(wifi_nrf, CONFIG_WIFI_LOG_LEVEL);
 
 extern struct nrf_wifi_drv_priv_zep rpu_drv_priv_zep;
 static struct nrf_wifi_ctx_zep *rpu_ctx = &rpu_drv_priv_zep.rpu_ctx_zep;
@@ -412,34 +412,37 @@ int nrf_wifi_config_sr_switch(bool antenna_mode, bool bt_external_antenna)
 	int ret;
 
 	if (!device_is_ready(btrf_switch_spec.port)) {
-		//LOG_ERR("Unable to open GPIO device\n");
+		LOG_ERR("Unable to open GPIO device\n");
 		return -ENODEV;
 	}
 
 	ret = gpio_pin_configure_dt(&btrf_switch_spec, GPIO_OUTPUT);
 	if (ret < 0) {
-		//LOG_ERR("Unable to configure GPIO device\n");
+		LOG_ERR("Unable to configure GPIO device\n");
 		return -1;
 	}
 
 	
 	if (bt_external_antenna) {
 		gpio_pin_set_dt(&btrf_switch_spec, 0x1);
-		////LOG_INF("Antenna used: External.\n");
-		////LOG_INF("Antenna mode: Separate.\n");
-		////LOG_INF("GPIO P1.10 set to 1\n");
+		/**LOG_INF("Antenna used: External.\n");
+		 *LOG_INF("Antenna mode: Separate.\n");
+		 *LOG_INF("GPIO P1.10 set to 1\n");
+		 */
 	} else {
 		if (antenna_mode) {
 			gpio_pin_set_dt(&btrf_switch_spec, 0x0);
-			////LOG_INF("Antenna used: Chip. Separate antennas.\n");
-			////LOG_INF("GPIO P1.10 set to 0\n");
+			/**LOG_INF("Antenna used: Chip. Separate antennas.\n");
+			 *LOG_INF("GPIO P1.10 set to 0\n");
+			 */
 		} else {
 			gpio_pin_set_dt(&btrf_switch_spec, 0x1);
-			////LOG_INF("Antenna used: Chip. Shared antenna.\n");
-			////LOG_INF("GPIO P1.10 set to 1\n");
+			/**LOG_INF("Antenna used: Chip. Shared antenna.\n");
+			 *LOG_INF("GPIO P1.10 set to 1\n");
+			 */
 		}
 	}
-	////LOG_INF("Successfully configured GPIO P1.10\n");
+	/* LOG_INF("Successfully configured GPIO P1.10\n"); */
 
 	return 0;
 }

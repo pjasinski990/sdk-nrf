@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef BT_UTILS_H_
-#define BT_UTILS_H_
+#ifndef OT_UTILS_H_
+#define OT_UTILS_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,7 +17,7 @@
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int bt_throughput_test_init(bool is_ble_central);
+int bt_throughput_test_init(bool is_ot_client);
 
 /**
  * @brief Run BLE throughput test
@@ -29,7 +29,7 @@ int bt_throughput_test_run(void);
 /**
  * @brief Run BLE connection test
  */
-void bt_conn_test_run(void);
+void ot_conn_test_run(void);
 
 /**
  * @brief Exit BLE throughput test
@@ -42,7 +42,7 @@ int bt_throughput_test_exit(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int bt_connection_init(bool is_ble_central);
+int bt_connection_init(bool is_ot_client);
 
 /**
  * @brief Initialization for BT connection
@@ -86,6 +86,8 @@ void set_tx_power(uint8_t handle_type, uint16_t handle, int8_t tx_pwr_lvl);
  */
 void get_tx_power(uint8_t handle_type, uint16_t handle, int8_t *tx_pwr_lvl);
 
+//========================================================================================== Thread
+
 /**
  * @brief Start OpenThread discovery
  *
@@ -94,4 +96,32 @@ void get_tx_power(uint8_t handle_type, uint16_t handle, int8_t *tx_pwr_lvl);
 void open_thread_discover_start(void);
 
 
-#endif /* BT_UTILS_H_ */
+/**
+ * Initialize Thread throughput test
+ *
+ * @return Zero on success or (negative) error code otherwise.
+ */
+int thread_throughput_test_init(bool is_thread_client);
+
+/**
+ * @brief Run Thread throughput test
+ *
+ * @return Zero on success or (negative) error code otherwise.
+ */
+int thread_throughput_test_run(void);
+
+/**
+ * @brief Exit Thread throughput test
+ *
+ * @return Zero on success or (negative) error code otherwise.
+ */
+int thread_throughput_test_exit(void);
+
+/**
+ * @brief Check state of the thread device
+ *
+ * @return None.
+ */
+const char* check_ot_state(void);
+
+#endif /* OT_UTILS_H_ */
