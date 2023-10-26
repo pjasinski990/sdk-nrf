@@ -1084,7 +1084,7 @@ void ot_conn_test_run(void)
 	
 	ot_discov_attempt_cnt++;
 	/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
-	open_thread_discover_start();
+	ot_start_discovery();
 	
 	while (true) {
 		if (k_uptime_get_32() - test_start_time > CONFIG_COEX_TEST_DURATION) {
@@ -1095,7 +1095,7 @@ void ot_conn_test_run(void)
 }
 
 
-static void setNetworkConfiguration(otInstance *aInstance)
+static void ot_setNetworkConfiguration(otInstance *aInstance)
 {
 	static char          aNetworkName[] = "TestNetwork";
     otOperationalDataset aDataset;
@@ -1156,17 +1156,17 @@ void ot_handle_active_discov_result(struct otActiveScanResult *result, void *con
 	if (repeat_ot_discovery == 1) {
 		ot_discov_attempt_cnt++;
 		/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
-		open_thread_discover_start();
+		ot_start_discovery();
 	}
 	k_sleep(K_MSEC(30));	
 }
 
-int thread_throughput_test_init(bool is_thread_client)
+int ot_initialization(bool is_thread_client)
 {
 	struct openthread_context *context = openthread_get_default_context();
 	otInstance *instance = openthread_get_default_instance();
 	LOG_INF("Updating thread parameters");
-	setNetworkConfiguration(instance);
+	ot_setNetworkConfiguration(instance);
 	LOG_INF("Enabling thread");
 	
 	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
@@ -1182,7 +1182,7 @@ int thread_throughput_test_init(bool is_thread_client)
 	return 0;
 }
 
-void open_thread_discover_start(void) {
+void ot_start_discovery(void) {
 	struct openthread_context *context = openthread_get_default_context();
 	otInstance *instance = openthread_get_default_instance();
 	
@@ -1192,7 +1192,7 @@ void open_thread_discover_start(void) {
 		OT_PANID_BROADCAST, false, false, ot_handle_active_discov_result, NULL);
 	openthread_api_mutex_unlock(openthread_get_default_context());
 }
-const char* check_ot_state()
+const char* ot_check_device_state()
 {
 	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
@@ -1200,7 +1200,7 @@ const char* check_ot_state()
 }
 
 	
-int thread_throughput_test_exit(void)
+int ot_device_disable(void)
 {
 	openthread_api_mutex_lock(openthread_get_default_context());
 	otThreadSetEnabled(openthread_get_default_instance(), false);

@@ -93,7 +93,7 @@ void get_tx_power(uint8_t handle_type, uint16_t handle, int8_t *tx_pwr_lvl);
  *
  * @return None
  */
-void open_thread_discover_start(void);
+void ot_start_discovery(void);
 
 
 /**
@@ -101,7 +101,7 @@ void open_thread_discover_start(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int thread_throughput_test_init(bool is_thread_client);
+int ot_initialization(bool is_thread_client);
 
 /**
  * @brief Run Thread throughput test
@@ -115,13 +115,13 @@ int thread_throughput_test_run(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int thread_throughput_test_exit(void);
+int ot_device_disable(void);
 
 /**
  * @brief Check state of the thread device
  *
  * @return None.
  */
-const char* check_ot_state(void);
+const char* ot_check_device_state(void);
 
 #endif /* OT_UTILS_H_ */

@@ -961,7 +961,7 @@ void print_common_test_params(bool is_ant_mode_sep, bool test_openThread, bool t
 		if (test_wifi) {
 			LOG_INF("Running Wi-Fi only test");
 		} else {
-			LOG_INF("Running BLE only test");
+			LOG_INF("Running Thread only test");
 		}
 	}
 	LOG_INF("Test duration in milliseconds: %d", CONFIG_COEX_TEST_DURATION);
@@ -976,14 +976,14 @@ void print_common_test_params(bool is_ant_mode_sep, bool test_openThread, bool t
 		LOG_INF("Antenna mode : Shared antennas");
 	}
 	if (is_ot_client) {
-		LOG_INF("BLE role : Central");
+		LOG_INF("Thread device role : Client");
 	} else {
-		LOG_INF("BLE role : Peripheral");
+		LOG_INF("Thread device role : Server");
 	}
 	if (ble_coex_enable) {
-		LOG_INF("BLE posts requests to PTA");
+		LOG_INF("Thread device posts requests to PTA");
 	} else {
-		LOG_INF("BLE doesn't post requests to PTA");
+		LOG_INF("Thread device doesn't post requests to PTA");
 	}
 	LOG_INF("--------------------------------");
 }
@@ -2590,7 +2590,7 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_openThread, bool test_wi
 	if (test_openThread) {
 		/* Initialize BLE by selecting role and connect it to peer device. */
 		ot_discov_attempt_cnt++;
-		thread_throughput_test_init(is_ot_client);
+		ot_initialization(is_ot_client);
 		k_sleep(K_SECONDS(3));
 
 		if (is_ot_client) {
@@ -2684,7 +2684,7 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_openThread, bool test_wi
 
 	if (test_openThread) {
 		//if (is_ot_client) {
-			thread_throughput_test_exit(); // to disable thread device after the test completion
+			ot_device_disable(); // to disable thread device after the test completion
 		//}
 	}
 	
@@ -2775,7 +2775,7 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_openThread, bool is_ot_client,
 	if (test_openThread) {
 		/* Initialize OT */
 		//ot_discov_attempt_cnt++;
-		thread_throughput_test_init(is_ot_client);
+		ot_initialization(is_ot_client);
 		k_sleep(K_SECONDS(3)); /* B4 start. not in loop. no need to reduce */
 		if (is_ot_client) {
 			/* nothing */
@@ -2873,7 +2873,7 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_openThread, bool is_ot_client,
 	}
 	if (test_openThread) {
 		//if (is_ot_client) {
-			thread_throughput_test_exit(); // to disable thread device after the test completion
+			ot_device_disable(); // to disable thread device after the test completion
 		//}
 	}
 
