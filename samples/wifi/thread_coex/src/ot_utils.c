@@ -21,10 +21,6 @@
 #include <openthread/dataset_ftd.h>
 #include <openthread/thread.h>
 
-//extern uint8_t is_ot_discovery_done;
-//uint8_t is_ot_discovery_done;
-//-----------------------------
-
 #include <string.h>
 #include <stdlib.h>
 
@@ -33,20 +29,20 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
-#if defined(CONFIG_WIFI_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_SCAN_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_CLIENT_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_UDP_CLIENT_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_SERVER_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_UDP_SERVER_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_CLIENT_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_TCP_CLIENT_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_SERVER_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_TCP_SERVER_BLE_CON_PERIPH) || \
-	defined(CONFIG_BLE_CON_CENTRAL_WIFI_SHUTDOWN) || \
-	defined(CONFIG_BLE_CON_PERIPHERAL_WIFI_SHUTDOWN)
+#if defined(CONFIG_WIFI_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_SCAN_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_PERIPH) || \
+	defined(CONFIG_OT_CON_CENTRAL_WIFI_SHUTDOWN) || \
+	defined(CONFIG_OT_CON_PERIPHERAL_WIFI_SHUTDOWN)
 
 	/**nothing . These are the tests in which the BLE connection
 	 *is done multiple times in a loop
@@ -57,17 +53,19 @@ LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 #endif
 
 uint32_t repeat_ot_discovery;
-
 uint32_t ot_discov_success_cnt;
 uint32_t ot_discov_attempt_cnt;
 uint32_t ot_discov_no_result_cnt;
+extern uint32_t ot_discov_timeout;
 
+uint32_t ot_connection_success_cnt;
+uint32_t ot_connection_attempt_cnt;
 
-uint32_t ble_disconnection_attempt_cnt;
-uint32_t ble_disconnection_success_cnt;
-uint32_t ble_disconnection_fail_cnt;
-uint32_t ble_discon_no_conn_cnt;
-uint32_t ble_discon_no_conn;
+uint32_t ot_disconnection_attempt_cnt;
+uint32_t ot_disconnection_success_cnt;
+uint32_t ot_disconnection_fail_cnt;
+uint32_t ot_discon_no_conn_cnt;
+uint32_t ot_discon_no_conn;
 
 uint32_t wifi_scan_cmd_cnt;
 extern uint32_t run_ble_central_wait_in_conn;
@@ -76,13 +74,14 @@ uint32_t ble_supervision_timeout;
 extern uint32_t ble_le_datalen_failed;
 extern uint32_t ble_phy_update_failed;
 extern uint32_t ble_le_datalen_timeout;
-extern uint32_t ot_discov_timeout;
-extern uint32_t ble_conn_param_update_failed;
-extern uint32_t ble_conn_param_update_timeout;
 
-int8_t openThread_tx_power = TXPOWER_INIT_VALUE;
-int8_t openThread_rssi = RSSI_INIT_VALUE;
-static int print_ble_conn_status_once = 1;
+extern uint32_t ble_phy_update_timeout;
+extern uint32_t ot_conn_param_update_failed;
+extern uint32_t ot_conn_param_update_timeout;
+
+int8_t ot_tx_power = TXPOWER_INIT_VALUE;
+int8_t ot_rssi = RSSI_INIT_VALUE;
+static int print_ot_connnection_status_once = 1;
 static int is_calback_from_loop = 0;
 
 #ifdef BLE_TX_PWR_CTRL_RSSI
@@ -127,14 +126,16 @@ static int is_calback_from_loop = 0;
 
 
 /* #define PRINT_BLE_UPDATES */
-#define SCAN_START_CONFIG_TIMEOUT K_SECONDS(10)
 #define WAIT_TIME_FOR_OT_DISC K_SECONDS(4)
-#define WAIT_TIME_FOR_BLE_DISCON K_SECONDS(5)
+#define SCAN_START_CONFIG_TIMEOUT K_SECONDS(10)
+#define WAIT_TIME_FOR_OT_CON K_SECONDS(4)
+#define WAIT_TIME_FOR_OT_DISCON K_SECONDS(5)
+#define K_SLEEP_DUR_FOR_OT_CONN K_SECONDS(3)
 
 
 static K_SEM_DEFINE(throughput_sem, 0, 1);
 static K_SEM_DEFINE(disconnected_sem, 0, 1);
-static K_SEM_DEFINE(open_thread_disc_sem, 0, 1);
+static K_SEM_DEFINE(connected_sem, 0, 1);
 
 extern uint8_t wait4_peer_ble2_start_connection;
 bool ble_periph_connected;
@@ -178,7 +179,6 @@ static const char *phy2str(uint8_t phy)
 	}
 }
 #endif
-
 
 void instruction_print(void)
 {
@@ -243,7 +243,7 @@ void exchange_func(struct bt_conn *conn, uint8_t att_err,
 		instruction_print();
 		test_ready = true;
 	}
-	//k_sem_give(&connected_sem);
+	k_sem_give(&connected_sem);
 }
 
 void discovery_complete(struct bt_gatt_dm *dm,
@@ -263,13 +263,13 @@ void discovery_complete(struct bt_gatt_dm *dm,
 	err = bt_gatt_exchange_mtu(default_conn, &exchange_params);
 
 	if (err) {
-		#ifdef PRINT_BLE_UPDATES
+#ifdef PRINT_BLE_UPDATES
 		LOG_ERR("MTU exchange failed (err %d)", err);
-		#endif
+#endif
 	} else {
-		#ifdef PRINT_BLE_UPDATES
+#ifdef PRINT_BLE_UPDATES
 		LOG_INF("MTU exchange pending");
-		#endif
+#endif
 	}
 }
 
@@ -320,7 +320,7 @@ void connected(struct bt_conn *conn, uint8_t hci_err)
 
 		return;
 	}
-	ot_discov_success_cnt++;
+	ot_connection_success_cnt++;
 	ble_central_connected = true;
 	ble_periph_connected = true;
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
@@ -328,11 +328,11 @@ void connected(struct bt_conn *conn, uint8_t hci_err)
 	if (is_calback_from_loop == 2) { 
 		run_ble_central_wait_in_conn = 1;
 	}
-	if (print_ble_conn_status_once) {
+	if (print_ot_connnection_status_once) {
 		LOG_INF("Connected as %s", info.role ==
 			BT_CONN_ROLE_CENTRAL ? "central" : "peripheral");
 		LOG_INF("Conn. interval is %u units", info.le.interval);
-		print_ble_conn_status_once = 0;
+		print_ot_connnection_status_once = 0;
 	}
 #endif
 	if (info.role == BT_CONN_ROLE_CENTRAL) {
@@ -385,8 +385,8 @@ void connected(struct bt_conn *conn, uint8_t hci_err)
 			printk("coex sample -->connected(): BLE Tx Power: %d\n", get_txp);
 			read_conn_rssi(default_conn_handle, &rssi);
 			printk("coex sample -->connected(): BLE RSSI: %d\n", rssi);
-			openThread_tx_power = get_txp;
-			openThread_rssi = rssi;
+			ot_tx_power = get_txp;
+			ot_rssi = rssi;
 		}
 	#endif
 }
@@ -455,10 +455,10 @@ void adv_start(void)
 }
 void disconnected(struct bt_conn *conn, uint8_t reason)
 {
-	#ifdef BLE_ITERATIVE_CONNECTION
+#ifdef BLE_ITERATIVE_CONNECTION
 	struct bt_conn_info info = {0};
 	int err = 0;
-	#endif 
+#endif 
 
 #ifdef PRINT_BLE_UPDATES
 	LOG_INF("Disconnected (reason 0x%02x)", reason);
@@ -472,10 +472,10 @@ void disconnected(struct bt_conn *conn, uint8_t reason)
 		default_conn = NULL;
 	}
 
-	#ifdef BLE_ITERATIVE_CONNECTION
+#ifdef BLE_ITERATIVE_CONNECTION
 	/* Disconnection count for central is available in bt_disconnect_central() */
 	if (!IS_ENABLED(CONFIG_OT_ROLE_CLIENT)) {
-		ble_disconnection_success_cnt++;
+		ot_disconnection_success_cnt++;
 	}
 
 	err = bt_conn_get_info(conn, &info);
@@ -485,13 +485,13 @@ void disconnected(struct bt_conn *conn, uint8_t reason)
 	}
 		/* Re-connect using same roles */
 		if (info.role == BT_CONN_ROLE_CENTRAL) {
-			ot_discov_attempt_cnt++;
+			ot_connection_attempt_cnt++;
 			scan_start(); 		
 		} else {
 			adv_start();
 		}
 		k_sem_give(&disconnected_sem);
-	#endif
+#endif
 }
 
 static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
@@ -558,10 +558,10 @@ void throughput_received(const struct bt_throughput_metrics *met)
 
 	if (met->write_len == 0) {
 		kb = 0;
-		#ifdef CONFIG_PRINTS_FOR_AUTOMATION
-			wait4_peer_ble2_start_connection = 1;
-			LOG_INF("");
-		#endif
+#ifdef CONFIG_PRINTS_FOR_AUTOMATION
+		wait4_peer_ble2_start_connection = 1;
+		LOG_INF("");
+#endif
 
 		return;
 	}
@@ -664,7 +664,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 //#endif
 	err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
 	if (err) {
-		ot_discov_timeout++;
+		ble_phy_update_timeout++;
 		LOG_INF("PHY update timeout");
 		return err;
 	}
@@ -693,7 +693,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 	if (info.le.interval != conn_param->interval_max) {
 		err = bt_conn_le_param_update(default_conn, conn_param);
 		if (err) {
-			ble_conn_param_update_failed++;
+			ot_conn_param_update_failed++;
 			LOG_ERR("Connection parameters update failed: %d",
 				    err);
 			return err;
@@ -702,7 +702,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 		LOG_INF("Connection parameters update pending");
 		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
 		if (err) {
-			ble_conn_param_update_timeout++;
+			ot_conn_param_update_timeout++;
 			LOG_INF("Connection parameters update timeout");
 			return err;
 		}
@@ -780,7 +780,48 @@ int bt_throughput_test_run(void)
 	return 0;
 }
 
+void ot_conn_test_run(void)
+{
 
+	int64_t stamp;
+	int64_t delta;
+	int err = 0;
+	/* get cycle stamp */
+	stamp = k_uptime_get_32();
+
+	delta = 0;
+	/**After the disconnection in loop, scan_start() in disconnected() will take of
+	 * repeting scan starts until the end of test duration.
+	 */
+	ot_connection_attempt_cnt++;
+	scan_start();
+	while (true) {
+		/* start scan to attempt a new connection, if BLE is not connected */
+		if (ot_discon_no_conn != 0) {
+			ot_discon_no_conn = 0;
+			ot_connection_attempt_cnt++;
+			scan_start();
+		}
+
+		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
+			break;
+		}
+		/* sleep time of less than 2 seconds throws coredump errors.*/
+		//k_sleep(K_SECONDS(5));
+		//k_sleep(K_SECONDS(3));
+		/* Common Wait for connection to complete after scan_start() from disconnected (),
+		 scan_start() at the start of the while loop */
+		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+		
+		if (IS_ENABLED(CONFIG_BT_ROLE_CENTRAL)) {
+			ot_disconnection_attempt_cnt++;
+			bt_disconnect_central();
+		}
+		/* Scan for next iteration starts in the disconnected() function.*/ 
+		err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
+		k_sleep(K_SLEEP_DUR_FOR_OT_CONN);
+	}
+}
 static const struct bt_throughput_cb throughput_cb = {
 	.data_read = throughput_read,
 	.data_received = throughput_received,
@@ -853,7 +894,7 @@ int bt_throughput_test_init(bool is_ot_client)
 
 
 
-int bt_connection_init(bool is_ot_client)
+int ot_connection_init(bool is_ot_client)
 {
 	int err;
 	int64_t stamp;
@@ -924,19 +965,19 @@ int bt_disconnect_central(void)
 
 	if (!default_conn) {
 		/* LOG_INF("Not connected!"); */
-		ble_discon_no_conn_cnt++;
-		ble_discon_no_conn++;
+		ot_discon_no_conn_cnt++;
+		ot_discon_no_conn++;
 		return -ENOTCONN;
 	}
 
 	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 	if (err) {
 		/* LOG_INF("Cannot disconnect!"); */
-		ble_disconnection_fail_cnt++;
+		ot_disconnection_fail_cnt++;
 		return err;
 	}
 
-	ble_disconnection_success_cnt++;
+	ot_disconnection_success_cnt++;
 	return 0;
 }
 int bt_throughput_test_exit(void)
@@ -1075,9 +1116,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 //=========================================================================================== Thread 
 
-void ot_conn_test_run(void) // to be updated
-{
-}
+
 void ot_discovery_test_run(void)
 {
 	/* LOG_INF("In ot_discovery_test_run() function"); */
@@ -1153,7 +1192,7 @@ void ot_handle_active_discov_result(struct otActiveScanResult *result, void *con
 		ot_discov_no_result_cnt++;
 	} else {
 		/* LOG_INF("panid: %04x channel: %2u rssi: %3d",result->mPanId, result->mChannel, result->mRssi); */
-		openThread_rssi = result->mRssi;
+		ot_rssi = result->mRssi;
 		ot_discov_success_cnt++;
 	}
 	

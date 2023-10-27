@@ -29,12 +29,12 @@ int bt_throughput_test_run(void);
 
 
 /**
- * @brief Run OT discovery test
+ * @brief Run OpenThread discovery test
  */
 void ot_discovery_test_run(void);
 
 /**
- * @brief Run BLE connection test
+ * @brief Run OpenThread connection test
  */
 void ot_conn_test_run(void);
 
@@ -49,7 +49,7 @@ int bt_throughput_test_exit(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int bt_connection_init(bool is_ot_client);
+int ot_connection_init(bool is_ot_client);
 
 /**
  * @brief Initialization for BT connection

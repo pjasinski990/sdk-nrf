@@ -65,6 +65,9 @@ LOG_MODULE_REGISTER(ot_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 #define KSLEEP_WHILE_DISCON_CENTRAL_2SEC K_SECONDS(2)
 
 extern uint32_t repeat_ot_discovery;
+extern uint32_t ot_discov_attempt_cnt;
+extern uint32_t ot_discov_success_cnt;
+extern uint32_t ot_discov_no_result_cnt;
 
 static uint32_t wifi_scan_cnt_24g;
 static uint32_t wifi_scan_cnt_5g;
@@ -93,15 +96,16 @@ uint32_t run_ble_central_wait_in_conn;
 
 extern uint32_t ble_supervision_timeout;
 
-extern uint32_t ot_discov_attempt_cnt;
-extern uint32_t ot_discov_success_cnt;
-extern uint32_t ot_discov_no_result_cnt;
 
-extern uint32_t ble_disconnection_attempt_cnt;
-extern uint32_t ble_disconnection_success_cnt;
-extern uint32_t ble_disconnection_fail_cnt;
-extern uint32_t ble_discon_no_conn_cnt;
-extern uint32_t ble_discon_no_conn;
+
+extern uint32_t ot_connection_attempt_cnt;
+extern uint32_t ot_connection_success_cnt;
+
+extern uint32_t ot_disconnection_attempt_cnt;
+extern uint32_t ot_disconnection_success_cnt;
+extern uint32_t ot_disconnection_fail_cnt;
+extern uint32_t ot_discon_no_conn_cnt;
+extern uint32_t ot_discon_no_conn;
 
 extern uint32_t ble_disconn_cnt_stability;
 
@@ -159,7 +163,7 @@ void run_ot_discovery_test(void);
  *
  * @return None
  */
-void run_bt_connection_test(void);
+void run_ot_connection_test(void);
 
 /**
  * @brief Wi-Fi scan test run
@@ -321,40 +325,40 @@ uint32_t repeat_wifi_scan = 1;
 		K_TICKS_FOREVER);
 #endif
 
-#if defined(CONFIG_WIFI_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_SCAN_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_CLIENT_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_UDP_CLIENT_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_SERVER_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_UDP_SERVER_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_CLIENT_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_TCP_CLIENT_BLE_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_SERVER_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_TP_TCP_SERVER_BLE_CON_PERIPH) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_UDP_CLIENT_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_UDP_SERVER_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_TCP_CLIENT_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_TCP_SERVER_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_UDP_CLIENT_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_UDP_SERVER_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_TCP_CLIENT_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_TCP_SERVER_STABILITY) || \
-	defined(CONFIG_BLE_CON_CENTRAL_WIFI_SHUTDOWN) || \
-	defined(CONFIG_BLE_CON_PERIPHERAL_WIFI_SHUTDOWN)
+#if defined(CONFIG_WIFI_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_SCAN_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_PERIPH) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_PERIPH) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_CON_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_TP_UDP_CLIENT_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_TP_UDP_SERVER_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_TP_TCP_CLIENT_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_TP_TCP_SERVER_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_CON_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_UDP_CLIENT_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_UDP_SERVER_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_TCP_CLIENT_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_TCP_SERVER_STABILITY) || \
+	defined(CONFIG_OT_CON_CENTRAL_WIFI_SHUTDOWN) || \
+	defined(CONFIG_OT_CON_PERIPHERAL_WIFI_SHUTDOWN)
 
-	#define ENABLE_BLE_CONN_TEST
+	#define ENABLE_OT_CONN_TEST
 
-	K_THREAD_DEFINE(run_bt_connection,
+	K_THREAD_DEFINE(run_ot_connection,
 		CONFIG_WIFI_THREAD_STACK_SIZE,
-		run_bt_connection_test,
+		run_ot_connection_test,
 		NULL,
 		NULL,
 		NULL,
@@ -363,18 +367,18 @@ uint32_t repeat_wifi_scan = 1;
 		K_TICKS_FOREVER);
 #endif
 
-#if defined(CONFIG_WIFI_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_SCAN_BLE_CON_PERIPH) || \
+#if defined(CONFIG_WIFI_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_SCAN_OT_CON_PERIPH) || \
 	defined(CONFIG_WIFI_SCAN_BLE_TP_CENTRAL) || \
 	defined(CONFIG_WIFI_SCAN_BLE_TP_PERIPH) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_CENTRAL) || \
-	defined(CONFIG_WIFI_CON_SCAN_BLE_CON_PERIPH) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH) || \
 	defined(CONFIG_WIFI_CON_SCAN_BLE_TP_CENTRAL) || \
 	defined(CONFIG_WIFI_CON_SCAN_BLE_TP_PERIPH)	|| \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) || \
-	defined(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY)
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) || \
+	defined(CONFIG_OT_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY)
 
 	#define ENABLE_WIFI_SCAN_TEST
 
@@ -547,7 +551,7 @@ void print_common_test_params(bool is_ant_mode_sep, bool test_openThread, bool t
  *
  * @return None
  */
-void print_ble_connection_test_params(bool is_ot_client);
+void print_ot_connection_test_params(bool is_ot_client);
 
 #ifdef CONFIG_TWT_ENABLE
 	/**

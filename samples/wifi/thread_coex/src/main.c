@@ -40,12 +40,12 @@ int main(void)
 
 	bool is_wifi_conn_scan =
 		IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_DISCOV) ||
-		IS_ENABLED(CONFIG_WIFI_CON_SCAN_BLE_CON_CENTRAL) ||
-		IS_ENABLED(CONFIG_WIFI_CON_SCAN_BLE_CON_PERIPH) ||
+		IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) ||
+		IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH) ||
 		IS_ENABLED(CONFIG_WIFI_CON_SCAN_BLE_TP_CENTRAL) ||
 		IS_ENABLED(CONFIG_WIFI_CON_SCAN_BLE_TP_PERIPH) ||
-		IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY);
+		IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) ||
+		IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY);
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -82,8 +82,13 @@ int main(void)
 	}
 #endif /* CONFIG_NRF700X_BT_COEX */
 
-//#ifdef CONFIG_RUN_SPT_TESTS
-#if 0
+	if (IS_ENABLED(CONFIG_WIFI_SCAN_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_SCAN_OT_CON_PERIPH) ||
+	IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH)) {
+		ret = wifi_scan_ot_connection(is_ant_mode_sep, test_openThread, test_wifi,
+		is_ot_client, is_wifi_conn_scan);
+	}
 
 
 	if (IS_ENABLED(CONFIG_WIFI_SCAN_BLE_TP_CENTRAL) ||
@@ -99,7 +104,17 @@ int main(void)
 		ret = wifi_con_ble_tput(test_wifi, is_ant_mode_sep, test_openThread, is_ot_client);
 	}
 
-
+	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_PERIPH) ||
+	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_PERIPH) ||
+	IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_CENTRAL) ||
+	IS_ENABLED(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_PERIPH) ||
+	IS_ENABLED(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_PERIPH)) {
+		ret = wifi_tput_ot_connection(test_wifi, test_openThread, is_ot_client,
+		is_wifi_server, is_ant_mode_sep, is_wifi_zperf_udp);
+	}
 
 	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_BLE_TP_CENTRAL) ||
 	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_BLE_TP_CENTRAL) ||
@@ -112,69 +127,52 @@ int main(void)
 		ret = wifi_tput_ble_tput(test_wifi, is_ant_mode_sep,
 		test_openThread, is_ot_client, is_wifi_server, is_wifi_zperf_udp);
 	}
-#endif
 
 
-	
-#if 0
-	#ifdef CONFIG_RUN_ST_TESTS
-		if (IS_ENABLED(CONFIG_WIFI_CON_BLE_CON_CENTRAL_STABILITY) ||
-		IS_ENABLED(CONFIG_WIFI_CON_BLE_CON_PERIPH_STABILITY)) {
-			ret = wifi_con_stability_ble_con_interference(test_wifi, test_openThread, is_ot_client,
-			is_ant_mode_sep);
-		}
+	if (IS_ENABLED(CONFIG_WIFI_CON_OT_CON_CENTRAL_STABILITY) ||
+	IS_ENABLED(CONFIG_WIFI_CON_OT_CON_PERIPH_STABILITY)) {
+		ret = wifi_con_stability_ot_connection_interference(test_wifi, test_openThread, is_ot_client,
+		is_ant_mode_sep);
+	}
 
-		if (IS_ENABLED(CONFIG_WIFI_CON_BLE_TP_CENTRAL_STABILITY) ||
-		IS_ENABLED(CONFIG_WIFI_CON_BLE_TP_PERIPH_STABILITY)) {
-			ret = wifi_con_stability_ble_tput_interference(test_wifi, is_ant_mode_sep, test_openThread,
-				is_ot_client);
-		}
+	if (IS_ENABLED(CONFIG_WIFI_CON_BLE_TP_CENTRAL_STABILITY) ||
+	IS_ENABLED(CONFIG_WIFI_CON_BLE_TP_PERIPH_STABILITY)) {
+		ret = wifi_con_stability_ble_tput_interference(test_wifi, is_ant_mode_sep, test_openThread,
+			is_ot_client);
+	}
 
-		if (IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_SCAN_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY)) {
-			ret = ble_con_stability_wifi_scan_interference(is_ant_mode_sep, test_openThread, test_wifi,
-			is_ot_client, is_wifi_conn_scan);
-		}
+	if (IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_SCAN_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_CON_SCAN_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_SCAN_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_CON_SCAN_STABILITY)) {
+		ret = ot_con_stability_wifi_scan_interference(is_ant_mode_sep, test_openThread, test_wifi,
+		is_ot_client, is_wifi_conn_scan);
+	}
 
-		if (IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_CON_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_CON_STABILITY)) {
-			if (is_ot_client) {
-				LOG_INF("Test case: ble_conn_central_wifi_con_stability");
-			} else {
-				LOG_INF("Test case: ble_conn_peripheral_wifi_con_stability");
-			}
-			ret = ble_con_stability_wifi_conn_interference(test_wifi, test_openThread, is_ot_client,
-			is_ant_mode_sep);
-		}
 
-		if (IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_UDP_CLIENT_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_TCP_CLIENT_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_UDP_CLIENT_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_TCP_CLIENT_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_UDP_SERVER_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_CENTRAL_WIFI_TP_TCP_SERVER_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_UDP_SERVER_STABILITY) ||
-		IS_ENABLED(CONFIG_BLE_CONN_PERIPHERAL_WIFI_TP_TCP_SERVER_STABILITY)) {
-			ret = ble_con_stability_wifi_tput_interference(test_wifi, test_openThread,
-			is_ot_client, is_wifi_server, is_ant_mode_sep, is_wifi_zperf_udp);
-		}
-	#endif
-	#ifdef CONFIG_RUN_WST_TESTS
+	if (IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_TP_UDP_CLIENT_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_TP_TCP_CLIENT_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_UDP_CLIENT_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_TCP_CLIENT_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_TP_UDP_SERVER_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_CENTRAL_WIFI_TP_TCP_SERVER_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_UDP_SERVER_STABILITY) ||
+	IS_ENABLED(CONFIG_OT_CONN_PERIPHERAL_WIFI_TP_TCP_SERVER_STABILITY)) {
+		ret = ot_connection_stability_wifi_tput_interference(test_wifi, test_openThread,
+		is_ot_client, is_wifi_server, is_ant_mode_sep, is_wifi_zperf_udp);
+	}
 
-		if (IS_ENABLED(CONFIG_BLE_CON_CENTRAL_WIFI_SHUTDOWN) ||
-		IS_ENABLED(CONFIG_BLE_CON_PERIPHERAL_WIFI_SHUTDOWN)) {
-			ret = ble_con_wifi_shutdown(is_ot_client);
-		}
+	if (IS_ENABLED(CONFIG_OT_CON_CENTRAL_WIFI_SHUTDOWN) ||
+	IS_ENABLED(CONFIG_OT_CON_PERIPHERAL_WIFI_SHUTDOWN)) {
+		ret = ot_connection_wifi_shutdown(is_ot_client);
+	}
 
-		if (IS_ENABLED(CONFIG_BLE_TP_CENTRAL_WIFI_SHUTDOWN) ||
-		IS_ENABLED(CONFIG_BLE_TP_PERIPH_WIFI_SHUTDOWN)) {
-			ret = ble_tput_wifi_shutdown(is_ot_client);
-		}
-	#endif
-#endif
+	if (IS_ENABLED(CONFIG_BLE_TP_CENTRAL_WIFI_SHUTDOWN) ||
+	IS_ENABLED(CONFIG_BLE_TP_PERIPH_WIFI_SHUTDOWN)) {
+		ret = ble_tput_wifi_shutdown(is_ot_client);
+	}
 
+//============================================================ thread discovery cases
 	if (IS_ENABLED(CONFIG_WIFI_SCAN_OT_DISCOV) ||
 	IS_ENABLED(CONFIG_WIFI_CON_SCAN_OT_DISCOV)) {
 		ret = wifi_scan_ot_discov(is_ant_mode_sep, test_openThread, test_wifi,
@@ -194,20 +192,20 @@ int main(void)
 		LOG_INF("Test case failed");
 		goto err;
 	}
-	if (openThread_tx_power != TXPOWER_INIT_VALUE) {
-		LOG_INF("openThread Tx power: %d", openThread_tx_power);
+	if (ot_tx_power != TXPOWER_INIT_VALUE) {
+		LOG_INF("OT Tx power: %d", ot_tx_power);
 	} else {
-		LOG_INF("openThread Tx power: N/A");
+		LOG_INF("OT Tx power: N/A");
 	}
 	if (wifi_rssi != RSSI_INIT_VALUE) {
 		LOG_INF("WiFi RSSI: %d", wifi_rssi);
 	} else {
 		LOG_INF("WiFi RSSI: N/A");
 	}
-	if (openThread_rssi != RSSI_INIT_VALUE) {
-		LOG_INF("openThread RSSI: %d", openThread_rssi);
+	if (ot_rssi != RSSI_INIT_VALUE) {
+		LOG_INF("OT RSSI: %d", ot_rssi);
 	} else {
-		LOG_INF("openThread RSSI: N/A");
+		LOG_INF("OT RSSI: N/A");
 	}
 	LOG_INF("Test case(s) complete");
 
