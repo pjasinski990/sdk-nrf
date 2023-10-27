@@ -9,6 +9,7 @@
 
 
 #include <stdbool.h>
+#include <openthread/platform/radio.h>
 
 /**
  * Initialize Thread throughput test
@@ -38,5 +39,10 @@ int thread_throughput_test_exit(void);
  */
 const char* check_ot_state(void);
 
+void thread_start_commissioner(const char* psk, const otExtAddress* allowed_eui);
+
+void thread_stop_commissioner(void);
+
+void thread_start_joiner(const char *psk);
 
 #endif /* THREAD_UTILS_H_ */

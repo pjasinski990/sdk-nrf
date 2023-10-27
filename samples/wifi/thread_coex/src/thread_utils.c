@@ -13,13 +13,15 @@
 #include "zephyr/net/openthread.h"
 
 #include <zephyr/logging/log.h>
+#include <openthread/instance.h>
+#include <version.h>
 
 #include <openthread/config.h>
 #include <openthread/cli.h>
 #include <openthread/diag.h>
 #include <openthread/error.h>
+#include <openthread/joiner.h>
 #include <openthread/link.h>
-#include <openthread/platform/radio.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/logging.h>
 #include <openthread/dataset_ftd.h>
@@ -98,7 +100,7 @@ void handle_active_scan_result(struct otActiveScanResult *result, void *context)
 	LOG_INF("channel: %2u", result->mChannel);
 	LOG_INF("rssi: %3d", result->mRssi);
 	LOG_INF("----------------------------------");
-	
+
 	is_ot_discovery_done = 1;
 }
 
@@ -109,9 +111,9 @@ int thread_throughput_test_init(bool is_thread_client)
 	LOG_INF("Updating thread parameters");
 	setNetworkConfiguration(instance);
 	LOG_INF("Enabling thread");
-	
+
 	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
-	/* otThreadSetEnabled(instance, true); */ /* cli `thread start` */	
+	/* otThreadSetEnabled(instance, true); */ /* cli `thread start` */
 	otError err = openthread_start(context);	// 'ifconfig up && thread start'
 	if (err != OT_ERROR_NONE) {
 		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
@@ -130,14 +132,6 @@ int thread_throughput_test_init(bool is_thread_client)
 }
 
 
-const char* check_ot_state()
-{
-	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
-	return(otThreadDeviceRoleToString(current_role));
-}
-
-	
 int thread_throughput_test_exit(void)
 {
 	openthread_api_mutex_lock(openthread_get_default_context());
@@ -145,4 +139,54 @@ int thread_throughput_test_exit(void)
 	otIp6SetEnabled(openthread_get_default_instance(), false);
 	openthread_api_mutex_unlock(openthread_get_default_context());
 	return 0;
+}
+
+
+const char* check_ot_state()
+{
+	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
+	return(otThreadDeviceRoleToString(current_role));
+}
+
+
+void thread_start_commissioner(const char *pskd, const otExtAddress *allowed_eui64)
+{
+	struct openthread_context *context = openthread_get_default_context();
+
+	openthread_api_mutex_lock(context);
+	otCommissionerAddJoiner(openthread_get_default_instance(), allowed_eui64, pskd, 120);
+	openthread_api_mutex_unlock(context);
+}
+
+static void ot_joiner_start_handler(otError error, void *context)
+{
+    switch (error)
+    {
+    case OT_ERROR_NONE:
+        LOG_INF("Join success");
+		openthread_api_mutex_lock(openthread_get_default_context());
+		otThreadSetEnabled(openthread_get_default_instance(), true);
+		openthread_api_mutex_unlock(openthread_get_default_context());
+        break;
+
+    default:
+        LOG_ERR("Join failed [%s]", otThreadErrorToString(error));
+        break;
+    }
+}
+
+void thread_start_joiner(const char *pskd)
+{
+	LOG_INF("Starting joiner");
+	otInstance *instance = openthread_get_default_instance();
+	struct openthread_context *context = openthread_get_default_context();
+	openthread_api_mutex_lock(context);
+	otIp6SetEnabled(instance, true);
+	otJoinerStart(instance, pskd, NULL,
+				"Zephyr", "Zephyr",
+				KERNEL_VERSION_STRING, NULL,
+				&ot_joiner_start_handler, NULL);
+	openthread_api_mutex_unlock(context);
+	LOG_INF("Done.");
 }

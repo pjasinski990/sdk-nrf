@@ -15,7 +15,9 @@
 
 #include "main.h"
 #include <nrfx_clock.h>
+#include <openthread/thread.h>
 
+#include "zephyr/net/openthread.h"
 #include "zephyr_fmac_main.h"
 #include <zephyr/logging/log.h>
 
@@ -51,7 +53,7 @@ int main(void)
 
 
 wifi_memset_context();
-	
+
 wifi_net_mgmt_callback_functions();
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -78,52 +80,29 @@ wifi_net_mgmt_callback_functions();
 #endif /* CONFIG_NRF700X_SR_COEX */
 
 
-	thread_throughput_test_init(false);
-	
-	k_sleep(K_SECONDS(3));
-	
-	/* LOG_INF("Waiting for OT discover to complete"); */
-	while (1) {
-		if (is_ot_discovery_done) {
-			break;
-		} 
-	}
-	LOG_INF("OT discover complete");
+	// thread_throughput_test_init(false);
 
-	/* check OT device state periodically until the expected state is found */
-	max_iterations = total_duration_to_check/time_gap_between_checks;	
-	LOG_INF("Check OT device state for every %d seconds..", time_gap_between_checks);
-	LOG_INF("until the expected state is found (or) timeout of %d seconds", total_duration_to_check);
-	
+	thread_start_joiner("J01NME");
 	LOG_INF("OT device expected state %s", ot_state);
+	LOG_INF("Waiting until state is router...");
+	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 	while(1) {
-		ot_state_chk_iteration++;
-		/* LOG_INF("ot_state_chk_iteration: %d",ot_state_chk_iteration); */
-		ret_strcmp = strcmp(ot_state, check_ot_state());
-
-		/* exit when OT device role matches the expected state (or) timeout */
-		if (ret_strcmp == 0) {
-			is_ot_state_matched = true;
+		if (current_role == OT_DEVICE_ROLE_ROUTER) {
 			break;
 		}
-		if (ot_state_chk_iteration >= max_iterations) {
-			is_ot_state_matched = false;
-			break;
-		}
-		k_sleep(K_SECONDS(time_gap_between_checks));	
-	}	
-	if (is_ot_state_matched == true) {
-		LOG_INF("OT device state matched with the expected role");
-	} else {
-		LOG_ERR("OT device state NOT matched with the expected role");
+		k_sleep(K_SECONDS(1));
+		current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 	}
-	k_sleep(K_SECONDS(3));
-	thread_throughput_test_exit();
+
+	LOG_INF("Done waiting, current state: %s", otThreadDeviceRoleToString(current_role));
+
+	// k_sleep(K_SECONDS(30));
+	// thread_throughput_test_exit();
 
 	LOG_INF("Exiting the test after open thread discovery");
 	goto end_of_main;
 
-#if 0	
+#if 0
 	if (IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT) ||
 	IS_ENABLED(CONFIG_WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER) ||
