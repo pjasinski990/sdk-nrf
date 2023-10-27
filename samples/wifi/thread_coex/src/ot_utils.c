@@ -31,7 +31,7 @@
 #include "ot_utils.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(bt_utils, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if defined(CONFIG_WIFI_SCAN_BLE_CON_CENTRAL) || \
 	defined(CONFIG_WIFI_SCAN_BLE_CON_PERIPH) || \
@@ -80,8 +80,8 @@ extern uint32_t ot_discov_timeout;
 extern uint32_t ble_conn_param_update_failed;
 extern uint32_t ble_conn_param_update_timeout;
 
-int8_t ble_txpower = RSSI_INIT_VALUE;
-int8_t ble_rssi = RSSI_INIT_VALUE;
+int8_t openThread_tx_power = TXPOWER_INIT_VALUE;
+int8_t openThread_rssi = RSSI_INIT_VALUE;
 static int print_ble_conn_status_once = 1;
 static int is_calback_from_loop = 0;
 
@@ -385,8 +385,8 @@ void connected(struct bt_conn *conn, uint8_t hci_err)
 			printk("coex sample -->connected(): BLE Tx Power: %d\n", get_txp);
 			read_conn_rssi(default_conn_handle, &rssi);
 			printk("coex sample -->connected(): BLE RSSI: %d\n", rssi);
-			ble_txpower = get_txp;
-			ble_rssi = rssi;
+			openThread_tx_power = get_txp;
+			openThread_rssi = rssi;
 		}
 	#endif
 }
@@ -474,7 +474,7 @@ void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	#ifdef BLE_ITERATIVE_CONNECTION
 	/* Disconnection count for central is available in bt_disconnect_central() */
-	if (!IS_ENABLED(CONFIG_BT_ROLE_CENTRAL)) {
+	if (!IS_ENABLED(CONFIG_OT_ROLE_CLIENT)) {
 		ble_disconnection_success_cnt++;
 	}
 
@@ -1075,8 +1075,13 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 //=========================================================================================== Thread 
 
-void ot_conn_test_run(void)
+void ot_conn_test_run(void) // to be updated
 {
+}
+void ot_discovery_test_run(void)
+{
+	/* LOG_INF("In ot_discovery_test_run() function"); */
+	
 	int64_t test_start_time;
 	int err = 0;
 	/* get cycle stamp */
@@ -1148,7 +1153,7 @@ void ot_handle_active_discov_result(struct otActiveScanResult *result, void *con
 		ot_discov_no_result_cnt++;
 	} else {
 		/* LOG_INF("panid: %04x channel: %2u rssi: %3d",result->mPanId, result->mChannel, result->mRssi); */
-	
+		openThread_rssi = result->mRssi;
 		ot_discov_success_cnt++;
 	}
 	

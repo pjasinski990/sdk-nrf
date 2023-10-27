@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define TXPOWER_INIT_VALUE 127
 #define RSSI_INIT_VALUE 127
 
 /**
@@ -25,6 +26,12 @@ int bt_throughput_test_init(bool is_ot_client);
  * @return Zero on success or (negative) error code otherwise.
  */
 int bt_throughput_test_run(void);
+
+
+/**
+ * @brief Run OT discovery test
+ */
+void ot_discovery_test_run(void);
 
 /**
  * @brief Run BLE connection test

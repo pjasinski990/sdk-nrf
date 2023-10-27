@@ -90,10 +90,6 @@ config BLE_INTERVAL_MAX
 	int "BLE max connection interval. Each unit 1.25milliseconds"
 	default 80
 
-config BT_ROLE_CENTRAL
-	bool "BT device role"
-	default y
-
 config BT_GAP_ADV_FAST_INT_MIN_2
 	int "BT GAP ADV interval min value. Each unit 0.625milliseconds"
 	default 160
@@ -170,6 +166,10 @@ config OT_CHANNEL
 config OT_PAN_ID
 	int "Open thread PAN ID"
 	default 1
+
+config OT_ROLE_CLIENT
+	bool "OT device role"
+	default y
 
 rsource "test/Kconfig"
 endmenu

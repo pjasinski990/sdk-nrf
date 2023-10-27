@@ -14,7 +14,7 @@
 #include <bluetooth/scan.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(bt_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(ot_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <nrfx_clock.h>
 #include <zephyr/kernel.h>
@@ -47,6 +47,7 @@ LOG_MODULE_REGISTER(bt_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define DEMARCATE_TEST_START
 
+#define TXPOWER_INIT_VALUE 127
 #define RSSI_INIT_VALUE 127
 
 #define HIGHEST_CHANNUM_24G 14
@@ -145,6 +146,13 @@ void rpu_disable(void);
  * @return None
  */
 void run_bt_benchmark(void);
+
+/**
+ * @brief OT discovery test run
+ *
+ * @return None
+ */
+void run_ot_discovery_test(void);
 
 /**
  * @brief BT connection test run
@@ -278,6 +286,33 @@ uint32_t repeat_wifi_scan = 1;
 	K_THREAD_DEFINE(run_bt_traffic,
 		CONFIG_WIFI_THREAD_STACK_SIZE,
 		run_bt_benchmark,
+		NULL,
+		NULL,
+		NULL,
+		CONFIG_WIFI_THREAD_PRIORITY,
+		0,
+		K_TICKS_FOREVER);
+#endif
+
+
+
+
+
+
+
+
+#if defined(CONFIG_WIFI_SCAN_OT_DISCOV) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_DISCOV) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_DISCOV) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_DISCOV) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_DISCOV) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_DISCOV)
+
+	#define ENABLE_OT_DISCOV_TEST
+
+	K_THREAD_DEFINE(run_ot_discovery,
+		CONFIG_WIFI_THREAD_STACK_SIZE,
+		run_ot_discovery_test,
 		NULL,
 		NULL,
 		NULL,

@@ -28,8 +28,8 @@
 #include <zephyr_coex.h>
 
 extern int8_t wifi_rssi;
-extern int8_t ble_txpower;
-extern int8_t ble_rssi;
+extern int8_t openThread_tx_power;
+extern int8_t openThread_rssi;
 
 /**
  * @brief Function to test Wi-Fi scan/connected-scan and BLE connection central/peripheral

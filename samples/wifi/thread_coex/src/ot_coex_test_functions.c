@@ -690,6 +690,11 @@ void run_bt_connection_test(void)
 	ot_conn_test_run();
 }
 
+void run_ot_discovery_test(void)
+{
+	ot_discovery_test_run();
+}
+
 void run_wifi_scan_test(void)
 {
 	wifi_scan_test_run();
@@ -920,6 +925,9 @@ void wifi_connection_test_run(void)
 void start_ot_activity(void)
 {
 	/* Start BLE connection or throughput based on the test case */
+	#ifdef ENABLE_OT_DISCOV_TEST
+		k_thread_start(run_ot_discovery);
+	#endif
 	#ifdef ENABLE_BLE_CONN_TEST
 		k_thread_start(run_bt_connection);
 	#endif
@@ -931,6 +939,9 @@ void start_ot_activity(void)
 void run_ot_activity(void)
 {
 	/* In case BLE is peripheral, skip running BLE connection/traffic */
+	#ifdef ENABLE_OT_DISCOV_TEST
+		k_thread_join(run_ot_discovery, K_FOREVER);
+	#endif
 	#ifdef ENABLE_BLE_CONN_TEST
 		k_thread_join(run_bt_connection, K_FOREVER);
 	#endif

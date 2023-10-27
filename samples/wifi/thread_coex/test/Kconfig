@@ -9,19 +9,19 @@ menu "Nordic Coex sample - test"
 #-------------------------------------- test parameters
 choice TEST_TYPE
 	prompt "Test type"
-	default TEST_TYPE_WLAN_BLE
+	default TEST_TYPE_WLAN_OT
 
 config TEST_TYPE_WLAN_ONLY
 	bool "WLAN only"
 	help
 	  Enable WLAN only
 
-config TEST_TYPE_BLE_ONLY
-	bool "BLE only"
+config TEST_TYPE_OT_ONLY
+	bool "OT only"
 	help
-	  Enable BLE only
+	  Enable OT only
 
-config TEST_TYPE_WLAN_BLE
+config TEST_TYPE_WLAN_OT
 	bool "WLAN and BLE"
 	help
 	  Enable WLAN and BLE
@@ -29,18 +29,18 @@ endchoice
 
 config TEST_TYPE_WLAN
 	bool "WLAN"
-	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_BLE
+	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_OT
 	select WIFI
 	help
 	  Enable WLAN
 
-config TEST_TYPE_BLE
+config TEST_TYPE_OT
 	bool "Thread"
-	default y if TEST_TYPE_BLE_ONLY || TEST_TYPE_WLAN_BLE
+	default y if TEST_TYPE_OT_ONLY || TEST_TYPE_WLAN_OT
 	help
 	  Enable Thread
 
-config BT_EXTERNAL_ANTENNA
+config OT_EXTERNAL_ANTENNA
 	bool "Indicates if external antenna used for BT"
 	default n
 
@@ -67,8 +67,28 @@ config DEBUG_PRINT_WIFI_CONN_INFO
 config PRINTS_FOR_AUTOMATION
 	bool "Print info required for automation"
 	default y
-	  
+
 #----------------------------------- system tests
+#===================================================== thread tests	start  
+config WIFI_SCAN_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_CON_SCAN_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_TP_UDP_CLIENT_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_TP_TCP_CLIENT_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_TP_UDP_SERVER_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_TP_TCP_SERVER_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+#===================================================== thread tests	end  
 config WIFI_SCAN_BLE_CON_CENTRAL
 	bool "Indicates test is to be run or not"
 	default n
