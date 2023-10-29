@@ -10,12 +10,16 @@
 
 #include "zephyr/net/openthread.h"
 
+#include <zephyr/logging/log.h>
+#include <openthread/instance.h>
+#include <version.h>
 #include <openthread/config.h>
 #include <openthread/cli.h>
 #include <openthread/diag.h>
 #include <openthread/error.h>
+#include <openthread/joiner.h>
 #include <openthread/link.h>
-#include <openthread/platform/radio.h>
+//#include <openthread/platform/radio.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/logging.h>
 #include <openthread/dataset_ftd.h>
@@ -29,19 +33,19 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
-#if defined(CONFIG_WIFI_SCAN_OT_CON_CENTRAL) || \
+#if defined(CONFIG_WIFI_SCAN_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_SCAN_OT_CON_PERIPH) || \
-	defined(CONFIG_WIFI_CON_SCAN_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_CON_SCAN_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_CON_SCAN_OT_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_TP_UDP_CLIENT_OT_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_TP_UDP_SERVER_OT_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CON_PERIPH) || \
-	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_CENTRAL) || \
+	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CON_PERIPH) || \
-	defined(CONFIG_OT_CON_CENTRAL_WIFI_SHUTDOWN) || \
+	defined(CONFIG_OT_CONNECTION_WIFI_SHUTDOWN) || \
 	defined(CONFIG_OT_CON_PERIPHERAL_WIFI_SHUTDOWN)
 
 	/**nothing . These are the tests in which the BLE connection
@@ -60,6 +64,7 @@ extern uint32_t ot_discov_timeout;
 
 uint32_t ot_connection_success_cnt;
 uint32_t ot_connection_attempt_cnt;
+uint32_t ot_join_success;
 
 uint32_t ot_disconnection_attempt_cnt;
 uint32_t ot_disconnection_success_cnt;
@@ -292,6 +297,39 @@ struct bt_gatt_dm_cb discovery_cb = {
 	.error_found       = discovery_error,
 };
 
+/* call back OT device joiner */
+static void ot_joiner_start_handler(otError error, void *context)
+{
+	ot_join_success = 0; //as default
+    switch (error)
+    {
+    case OT_ERROR_NONE:
+        LOG_INF("OT Join success");
+		/** Step3: Start Thread for joiner. 
+		 *   i.e ot thread start
+		 *   Note: Device should join Thread network within 20s of timeout.
+		 */
+		openthread_api_mutex_lock(openthread_get_default_context());
+
+		otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+		if (err != OT_ERROR_NONE) {
+			LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		}
+		openthread_api_mutex_unlock(openthread_get_default_context());
+		
+		ot_connection_success_cnt++;
+		
+		ot_join_success = 1;
+		
+		k_sem_give(&connected_sem);
+        break;
+
+    default:
+        LOG_ERR("Join failed [%s]", otThreadErrorToString(error));
+		ot_join_success = 0;
+        break;
+    }
+}
 void connected(struct bt_conn *conn, uint8_t hci_err)
 {
 	struct bt_conn_info info = {0};
@@ -780,6 +818,47 @@ int bt_throughput_test_run(void)
 	return 0;
 }
 
+
+void thread_start_joiner(const char *pskd) 
+{
+	LOG_INF("Starting joiner");
+
+	otInstance *instance = openthread_get_default_instance();
+	struct openthread_context *context = openthread_get_default_context();
+
+	openthread_api_mutex_lock(context);
+	
+	/** Step1: Set null network key i.e,
+	 *  ot networkkey 00000000000000000000000000000000 
+	 */
+	ot_setNullNetworkKey(instance); /* added new */
+
+	/** Step2: Bring up the interface and start joining to the network on DK2 with pre-shared key. 
+	 *   i.e. ot ifconfig up 
+	 *        ot joiner start FEDCBA9876543210
+	 */
+	otIp6SetEnabled(instance, true); /* ot ifconfig up */
+	otJoinerStart(instance, pskd, NULL,
+				"Zephyr", "Zephyr",
+				KERNEL_VERSION_STRING, NULL,
+				&ot_joiner_start_handler, NULL);
+	openthread_api_mutex_unlock(context);
+	LOG_INF("OT start joiner Done.");
+}
+
+void thread_stop_joiner(void) 
+{
+	LOG_INF("Stopping joiner");
+
+	otInstance *instance = openthread_get_default_instance();
+	struct openthread_context *context = openthread_get_default_context();
+
+	openthread_api_mutex_lock(context);	
+	otJoinerStop(instance);
+	openthread_api_mutex_unlock(context);
+	LOG_INF("OT stop joiner Done.");
+}
+
 void ot_conn_test_run(void)
 {
 
@@ -794,28 +873,27 @@ void ot_conn_test_run(void)
 	 * repeting scan starts until the end of test duration.
 	 */
 	ot_connection_attempt_cnt++;
-	scan_start();
+
 	while (true) {
-		/* start scan to attempt a new connection, if BLE is not connected */
+		/* start a new connection */
 		if (ot_discon_no_conn != 0) {
 			ot_discon_no_conn = 0;
 			ot_connection_attempt_cnt++;
-			scan_start();
+			
+			/* start joining to the network with pre-shared key = FEDCBA9876543210 */
+			thread_start_joiner("FEDCBA9876543210");			
 		}
 
 		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
 			break;
 		}
-		/* sleep time of less than 2 seconds throws coredump errors.*/
-		//k_sleep(K_SECONDS(5));
-		//k_sleep(K_SECONDS(3));
-		/* Common Wait for connection to complete after scan_start() from disconnected (),
-		 scan_start() at the start of the while loop */
 		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
 		
-		if (IS_ENABLED(CONFIG_BT_ROLE_CENTRAL)) {
+		if (ot_join_success) {
 			ot_disconnection_attempt_cnt++;
-			bt_disconnect_central();
+			//bt_disconnect_central(); 
+			/* To Do : remove/stop joiner here to disconnect OT */
+			thread_stop_joiner();
 		}
 		/* Scan for next iteration starts in the disconnected() function.*/ 
 		err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
@@ -896,66 +974,69 @@ int bt_throughput_test_init(bool is_ot_client)
 
 int ot_connection_init(bool is_ot_client)
 {
-	int err;
-	int64_t stamp;
 
-	err = bt_enable(NULL);
-	if (err) {
-		LOG_ERR("Bluetooth init failed (err %d)", err);
-		return err;
-	}
-
-	/* LOG_INF("Bluetooth initialized"); */
-	scan_init();
-
-	/**
-	 *err = bt_throughput_init(&throughput, &throughput_cb);
-	 *if (err) {
-	 *	LOG_ERR("Throughput service initialization failed.");
-	 *	return err;
-	 *}
-	 */
-	buttons_init();
-
-	select_role(is_ot_client);
-
-	/**
-	 *LOG_INF("Waiting for connection.");
-	 *ble_scan2conn_start_time = k_uptime_get_32();
-	 *ble_scan2conn_time = 0;
-	 */
-
-	stamp = k_uptime_get_32();
-	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < SCAN_CONFIG_TIMEOUT) {
-		if (default_conn) {
-			break;
-		}
-		k_sleep(K_SECONDS(1));
-	}
-
-	if (!default_conn) {
-		LOG_INF("Cannot set up connection.");
-		return -ENOTCONN;
-	}
-
-	/**
-	 *ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
-	 *LOG_INF("Time taken for scan %lld ms", ble_scan2conn_time);
-	 *ble_scan2conn_start_time = k_uptime_get_32();
-	 *ble_scan2conn_time = 0;
-	 */
-
-	uint32_t conn_cfg_status = connection_configuration_set(
-			BT_LE_CONN_PARAM(CONFIG_BLE_INTERVAL_MIN,
-			CONFIG_BLE_INTERVAL_MAX,
-			CONFIG_BT_CONN_LATENCY, CONFIG_BT_SUPERVISION_TIMEOUT),
-			BT_CONN_LE_PHY_PARAM_2M,
-			BT_LE_DATA_LEN_PARAM_MAX);
-	/**
-	 *ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
-	 *LOG_INF("Time taken for connecion %lld ms", ble_scan2conn_time);
-	 */
-	return conn_cfg_status;
+//
+//	int err;
+//	int64_t stamp;
+//
+//	err = bt_enable(NULL);
+//	if (err) {
+//		LOG_ERR("Bluetooth init failed (err %d)", err);
+//		return err;
+//	}
+//
+//	/* LOG_INF("Bluetooth initialized"); */
+//	scan_init();
+//
+//	/**
+//	 *err = bt_throughput_init(&throughput, &throughput_cb);
+//	 *if (err) {
+//	 *	LOG_ERR("Throughput service initialization failed.");
+//	 *	return err;
+//	 *}
+//	 */
+//	buttons_init();
+//
+//	select_role(is_ot_client);
+//
+//	/**
+//	 *LOG_INF("Waiting for connection.");
+//	 *ble_scan2conn_start_time = k_uptime_get_32();
+//	 *ble_scan2conn_time = 0;
+//	 */
+//
+//	stamp = k_uptime_get_32();
+//	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < SCAN_CONFIG_TIMEOUT) {
+//		if (default_conn) {
+//			break;
+//		}
+//		k_sleep(K_SECONDS(1));
+//	}
+//
+//	if (!default_conn) {
+//		LOG_INF("Cannot set up connection.");
+//		return -ENOTCONN;
+//	}
+//
+//	/**
+//	 *ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+//	 *LOG_INF("Time taken for scan %lld ms", ble_scan2conn_time);
+//	 *ble_scan2conn_start_time = k_uptime_get_32();
+//	 *ble_scan2conn_time = 0;
+//	 */
+//
+//	uint32_t conn_cfg_status = connection_configuration_set(
+//			BT_LE_CONN_PARAM(CONFIG_BLE_INTERVAL_MIN,
+//			CONFIG_BLE_INTERVAL_MAX,
+//			CONFIG_BT_CONN_LATENCY, CONFIG_BT_SUPERVISION_TIMEOUT),
+//			BT_CONN_LE_PHY_PARAM_2M,
+//			BT_LE_DATA_LEN_PARAM_MAX);
+//	/**
+//	 *ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+//	 *LOG_INF("Time taken for connecion %lld ms", ble_scan2conn_time);
+//	 */
+//	return conn_cfg_status;
+    return 0; // nothing for now.
 }
 
 
@@ -1138,6 +1219,19 @@ void ot_discovery_test_run(void)
 	}
 }
 
+void ot_setNullNetworkKey(otInstance *aInstance)
+{	
+    otOperationalDataset aDataset;
+
+    memset(&aDataset, 0, sizeof(otOperationalDataset));
+
+    /* Set network key to null */
+    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
+    aDataset.mComponents.mIsNetworkKeyPresent = true;
+	
+    otDatasetSetActive(aInstance, &aDataset);
+}
 
 static void ot_setNetworkConfiguration(otInstance *aInstance)
 {

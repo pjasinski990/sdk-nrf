@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <openthread/platform/radio.h>
+
 #define TXPOWER_INIT_VALUE 127
 #define RSSI_INIT_VALUE 127
 
@@ -130,5 +132,43 @@ int ot_device_disable(void);
  * @return None.
  */
 const char* ot_check_device_state(void);
+
+
+/**
+ * @brief Start openThread commissioner
+ *
+ * @return None.
+ */
+void thread_start_commissioner(const char* psk, const otExtAddress* allowed_eui);
+
+/**
+ * @brief Stop openThread commissioner
+ *
+ * @return None.
+ */
+void thread_stop_commissioner(void);
+
+/**
+ * @brief Start openThread joiner
+ *
+ * @return None.
+ */
+void thread_start_joiner(const char *pskd);
+//void thread_start_joiner(const char *pskd, otInstance *instance);
+/* void thread_start_joiner(const char *pskd, otInstance *instance, struct openthread_context *context); */
+
+/**
+ * @brief Stop openThread joiner
+ *
+ * @return None.
+ */
+void thread_stop_joiner(void);
+
+/**
+ * @brief Set openThread network key to null
+ *
+ * @return None.
+ */
+void ot_setNullNetworkKey(otInstance *aInstance);
 
 #endif /* OT_UTILS_H_ */
