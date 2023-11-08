@@ -311,9 +311,11 @@ static void ot_joiner_start_handler(otError error, void *context)
 		 */
 		openthread_api_mutex_lock(openthread_get_default_context());
 
-		otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
-		if (err != OT_ERROR_NONE) {
-			LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		if (otThreadGetDeviceRole(openthread_get_default_instance()) == OT_DEVICE_ROLE_DISABLED) {
+			// otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+			// if (err != OT_ERROR_NONE) {
+			// 	LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+			// }
 		}
 		openthread_api_mutex_unlock(openthread_get_default_context());
 		
@@ -521,14 +523,14 @@ void disconnected(struct bt_conn *conn, uint8_t reason)
 		printk("Failed to get connection info (%d)\n", err);
 		return;
 	}
-		/* Re-connect using same roles */
-		if (info.role == BT_CONN_ROLE_CENTRAL) {
-			ot_connection_attempt_cnt++;
-			scan_start(); 		
-		} else {
-			adv_start();
-		}
-		k_sem_give(&disconnected_sem);
+	/* Re-connect using same roles */
+	if (info.role == BT_CONN_ROLE_CENTRAL) {
+		ot_connection_attempt_cnt++;
+		scan_start(); 		
+	} else {
+		adv_start();
+	}
+	k_sem_give(&disconnected_sem);
 #endif
 }
 
@@ -881,13 +883,13 @@ void ot_conn_test_run(void)
 			ot_connection_attempt_cnt++;
 			
 			/* start joining to the network with pre-shared key = FEDCBA9876543210 */
-			thread_start_joiner("FEDCBA9876543210");			
 		}
+		thread_start_joiner("FEDCBA9876543210");			
 
 		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
 			break;
 		}
-		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+		err = k_sem_take(&connected_sem, K_FOREVER);
 		
 		if (ot_join_success) {
 			ot_disconnection_attempt_cnt++;
@@ -896,7 +898,7 @@ void ot_conn_test_run(void)
 			thread_stop_joiner();
 		}
 		/* Scan for next iteration starts in the disconnected() function.*/ 
-		err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
+		// err = k_sem_take(&disconnected_sem, K_FOREVER);
 		k_sleep(K_SLEEP_DUR_FOR_OT_CONN);
 	}
 }
