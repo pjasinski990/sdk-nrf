@@ -17,14 +17,14 @@ config TEST_TYPE_WLAN_ONLY
 	  Enable WLAN only
 
 config TEST_TYPE_OT_ONLY
-	bool "OT only"
+	bool "Thread only"
 	help
-	  Enable OT only
+	  Enable Thread only
 
 config TEST_TYPE_WLAN_OT
-	bool "WLAN and OT"
+	bool "WLAN and Thread"
 	help
-	  Enable WLAN and OT
+	  Enable WLAN and Thread
 endchoice
 
 config TEST_TYPE_WLAN

@@ -4,36 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-//==================================================================================== thread 
-#include <assert.h>
-#include <inttypes.h>
-
-#include "zephyr/net/openthread.h"
-
-#include <zephyr/logging/log.h>
-#include <openthread/instance.h>
-#include <version.h>
-#include <openthread/config.h>
-#include <openthread/cli.h>
-#include <openthread/diag.h>
-#include <openthread/error.h>
-#include <openthread/joiner.h>
-#include <openthread/link.h>
-//#include <openthread/platform/radio.h>
-#include <openthread/tasklet.h>
-#include <openthread/platform/logging.h>
-#include <openthread/dataset_ftd.h>
-#include <openthread/thread.h>
-
-#include <string.h>
-#include <stdlib.h>
-
 #include "ot_utils.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
-
-
 
 #if defined(CONFIG_WIFI_SCAN_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_CON_SCAN_OT_CONNECTION) || \
@@ -42,7 +16,7 @@ LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 	defined(CONFIG_WIFI_TP_TCP_CLIENT_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_TP_TCP_SERVER_OT_CONNECTION) || \
 	defined(CONFIG_WIFI_SHUTDOWN_OT_CONNECTION)
-	/**nothing . These are the tests in which the OT connection
+	/**nothing . These are the tests in which the Thread connection
 	 *is done multiple times in a loop
 	 */
 	 #define OT_ITERATIVE_CONNECTION
@@ -69,7 +43,6 @@ uint32_t ot_discon_no_conn;
 uint32_t wifi_scan_cmd_cnt;
 extern uint32_t run_ot_client_wait_in_conn;
 
-uint32_t ot_supervision_timeout;
 extern uint32_t ot_datalen_failed;
 extern uint32_t ot_phy_update_failed;
 extern uint32_t ot_datalen_timeout;
@@ -84,7 +57,7 @@ static int print_ot_connnection_status_once = 1;
 static int is_calback_from_loop = 0;
 
 //#ifdef OT_TX_PWR_CTRL_RSSI
-//	/* to get/set OT Tx power and read OT RSSI for coex sample */
+//	/* to get/set Thread Tx power and read Thread RSSI for coex sample */
 //	#include <stddef.h>
 //	#include <zephyr/sys/printk.h>
 //	#include <zephyr/sys/util.h>
@@ -283,7 +256,7 @@ static volatile bool test_ready;
 //	.error_found       = discovery_error,
 //};
 
-/* call back OT device joiner */
+/* call back Thread device joiner */
 static void ot_joiner_start_handler(otError error, void *context)
 {
 	ot_join_success = 0; //as default
@@ -295,9 +268,9 @@ static void ot_joiner_start_handler(otError error, void *context)
 			ot_client_connected = true;
 			//LOG_INF("ot_client_connected: %d",ot_client_connected);
 			
-			LOG_INF("OT Join success");
+			LOG_INF("Thread Join success");
 
-//TODO ******************************************************************************** Enable this.
+// +++++++++++++++++++ TODO Enable this.
 
 #if 0		
 		//if (ot_connection_attempt_cnt==1) { // do this only once after first join attempt.
@@ -315,7 +288,7 @@ static void ot_joiner_start_handler(otError error, void *context)
 #endif	
 			
 			
-			// not required for OT connection stability tests.
+			// not required for Thread connection stability tests.
 			k_sem_give(&connected_sem);
         break;
 
@@ -386,7 +359,7 @@ static void ot_joiner_start_handler(otError error, void *context)
 //		int ret;
 //		int8_t rssi = 0xFF;
 //
-//		printk("OT Target Tx power %d\n", set_txp);
+//		printk("Thread Target Tx power %d\n", set_txp);
 //		default_conn = bt_conn_ref(conn);
 //		ret = bt_hci_get_conn_handle(default_conn,
 //						 &default_conn_handle);
@@ -414,10 +387,10 @@ static void ot_joiner_start_handler(otError error, void *context)
 //					 set_txp);
 //			get_tx_power(BT_HCI_VS_LL_HANDLE_TYPE_CONN,
 //					 default_conn_handle, &get_txp);
-//			printk("OT connection (%d)\n", default_conn_handle);
-//			printk("coex sample -->connected(): OT Tx Power: %d\n", get_txp);
+//			printk("Thread connection (%d)\n", default_conn_handle);
+//			printk("coex sample -->connected(): Thread Tx Power: %d\n", get_txp);
 //			read_conn_rssi(default_conn_handle, &rssi);
-//			printk("coex sample -->connected(): OT RSSI: %d\n", rssi);
+//			printk("coex sample -->connected(): Thread RSSI: %d\n", rssi);
 //			ot_tx_power = get_txp;
 //			ot_rssi = rssi;
 //		}
@@ -574,8 +547,8 @@ static void ot_joiner_start_handler(otError error, void *context)
 //}
 
 
-//static uint8_t throughput_read(const struct bt_throughput_metrics *met)
-static uint8_t throughput_read(void)
+//static uint8_t ot_throughput_read(const struct bt_throughput_metrics *met)
+static uint8_t ot_throughput_read(void)
 {
 //	LOG_INF("[peer] received %u bytes (%u KB)"
 //	       " in %u GATT writes at %u bps",
@@ -793,7 +766,7 @@ int ot_throughput_test_run(void)
 //			break;
 //		}
 //		data += 495;
-//		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
+//		if ((k_uptime_get_32() - stamp) > CONFIG_COEX_TEST_DURATION) {
 //			break;
 //		}
 //	}
@@ -805,7 +778,7 @@ int ot_throughput_test_run(void)
 //	       data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 //
 //	/* read back char from peer */
-//    //Note: use OT throughput	
+//    //Note: use Thread throughput	
 //	//err = bt_throughput_read(&throughput);
 //	if (err) {
 //		LOG_ERR("GATT read failed (err %d)", err);
@@ -820,7 +793,7 @@ int ot_throughput_test_run(void)
 }
 
 
-void thread_start_joiner(const char *pskd) 
+void ot_start_joiner(const char *pskd) 
 {
 	LOG_INF("Starting joiner");
 
@@ -834,7 +807,8 @@ void thread_start_joiner(const char *pskd)
 	 */
 	ot_setNullNetworkKey(instance); /* added new */
 
-	/** Step2: Bring up the interface and start joining to the network on DK2 with pre-shared key. 
+	/** Step2: Bring up the interface and start joining to the network
+	 *  		on DK2 with pre-shared key. 
 	 *   i.e. ot ifconfig up 
 	 *        ot joiner start FEDCBA9876543210
 	 */
@@ -844,10 +818,10 @@ void thread_start_joiner(const char *pskd)
 				KERNEL_VERSION_STRING, NULL,
 				&ot_joiner_start_handler, NULL);
 	openthread_api_mutex_unlock(context);
-	//LOG_INF("OT start joiner Done.");
+	//LOG_INF("Thread start joiner Done.");
 }
 
-void thread_stop_joiner(void) 
+void ot_stop_joiner(void) 
 {
 	LOG_INF("Stopping joiner");
 
@@ -857,7 +831,7 @@ void thread_stop_joiner(void)
 	openthread_api_mutex_lock(context);	
 	otJoinerStop(instance);
 	openthread_api_mutex_unlock(context);
-	LOG_INF("OT stop joiner Done.");
+	LOG_INF("Thread stop joiner Done.");
 	
 	ot_disconnection_success_cnt++;
 	k_sem_give(&disconnected_sem);
@@ -881,7 +855,7 @@ void ot_conn_test_run(void)
 			ot_connection_attempt_cnt++;
 			
 			/* start joining to the network with pre-shared key = FEDCBA9876543210 */
-			thread_start_joiner("FEDCBA9876543210");			
+			ot_start_joiner("FEDCBA9876543210");			
 		//}
 
 		//Note: with sleep of 2/3 seconds, not observing the issue of one success for 
@@ -891,7 +865,7 @@ void ot_conn_test_run(void)
 
 		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
 		
-		if (k_uptime_get_32() - stamp > CONFIG_COEX_TEST_DURATION) {
+		if ((k_uptime_get_32() - stamp) > CONFIG_COEX_TEST_DURATION) {
 			break;
 		}
 		
@@ -899,15 +873,15 @@ void ot_conn_test_run(void)
 		if (ot_join_success) {
 			ot_disconnection_attempt_cnt++;
 			
-			/** ++++++++++++++++++++++++++++++  TODO ++++++++++++++++++++++++++++++++++++++++++++ 
-			  *remove/stop joiner here to disconnect OT 
+			/** +++++++++++++++  TODO +++++++++++++
+			  *remove/stop joiner here to disconnect Thread 
 			  */
-			thread_stop_joiner();
+			ot_stop_joiner();
 		}
 		
-		/** ++++++++++++++++++++++++++++++  TODO ++++++++++++++++++++++++++++++++++++++++++++
-		 * currently thread_start_joiner()  is called in this function. this should be called
-		 * from thread_stop_joiner()/disconnect() like OT scan 
+		/** +++++++++++++++  TODO +++++++++++++
+		 * currently ot_start_joiner()  is called in this function. this should be called
+		 * from ot_stop_joiner()/disconnect() like Thread scan 
 		 * is called from the disconnected() callback.
 		 */
 		
@@ -917,7 +891,7 @@ void ot_conn_test_run(void)
 	}
 }
 //static const struct ot_throughput_cb throughput_cb = {
-//	.data_read = throughput_read,
+//	.data_read = ot_throughput_read,
 //	.data_received = ot_throughput_received,
 //	.data_send = ot_throughput_send
 //};
@@ -1212,9 +1186,6 @@ int ot_tput_test_exit(void)
 //	.le_data_len_updated = le_data_length_updated
 //};
 
-//=========================================================================================== Thread 
-
-
 void ot_discovery_test_run(void)
 {
 	/* LOG_INF("In ot_discovery_test_run() function"); */
@@ -1225,7 +1196,7 @@ void ot_discovery_test_run(void)
 	test_start_time = k_uptime_get_32();
 	
 	ot_discov_attempt_cnt++;
-	/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
+	/* LOG_INF("calling Thread discover for %d time",ot_discov_attempt_cnt); */
 	ot_start_discovery();
 	
 	while (true) {
@@ -1243,7 +1214,10 @@ void ot_setNullNetworkKey(otInstance *aInstance)
     memset(&aDataset, 0, sizeof(otOperationalDataset));
 
     /* Set network key to null */
-    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x00, 0x00, 0x00,
+										0x00, 0x00, 0x00, 0x00,
+										0x00, 0x00, 0x00, 0x00,
+										0x00, 0x00, 0x00, 0x00};
     memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
     aDataset.mComponents.mIsNetworkKeyPresent = true;
 	
@@ -1276,14 +1250,20 @@ static void ot_setNetworkConfiguration(otInstance *aInstance)
     aDataset.mComponents.mIsPanIdPresent = true;
 
     /* Set Extended Pan ID */
-    /* uint8_t extPanId[OT_EXT_PAN_ID_SIZE] = {0xC0, 0xDE, 0x1A, 0xB5, 0xC0, 0xDE, 0x1A, 0xB5}; */
-    uint8_t extPanId[OT_EXT_PAN_ID_SIZE] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
+    /* uint8_t extPanId[OT_EXT_PAN_ID_SIZE] = {0xC0, 0xDE, 0x1A, 0xB5,
+												0xC0, 0xDE, 0x1A, 0xB5}; */
+    uint8_t extPanId[OT_EXT_PAN_ID_SIZE] = {0x11, 0x11, 0x11, 0x11,
+											0x11, 0x11, 0x11, 0x11};
     memcpy(aDataset.mExtendedPanId.m8, extPanId, sizeof(aDataset.mExtendedPanId));
     aDataset.mComponents.mIsExtendedPanIdPresent = true;
 
     /* Set network key */
-    /* uint8_t key[OT_NETWORK_KEY_SIZE] = {0x12, 0x34, 0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34, 0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34, 0xC0, 0xDE}; */
-    uint8_t key[OT_NETWORK_KEY_SIZE] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
+    /* uint8_t key[OT_NETWORK_KEY_SIZE] = 
+				{0x12, 0x34, 0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34,
+				0xC0, 0xDE, 0x1A, 0xB5, 0x12, 0x34, 0xC0, 0xDE}; */
+    uint8_t key[OT_NETWORK_KEY_SIZE] =
+				{0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+				0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
     memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
     aDataset.mComponents.mIsNetworkKeyPresent = true;
 
@@ -1302,7 +1282,8 @@ void ot_handle_active_discov_result(struct otActiveScanResult *result, void *con
 	if (!result) {
 		ot_discov_no_result_cnt++;
 	} else {
-		/* LOG_INF("panid: %04x channel: %2u rssi: %3d",result->mPanId, result->mChannel, result->mRssi); */
+		/* LOG_INF("panid: %04x channel: %2u rssi: %3d",
+					result->mPanId, result->mChannel, result->mRssi); */
 		ot_rssi = result->mRssi;
 		ot_discov_success_cnt++;
 	}
@@ -1310,7 +1291,7 @@ void ot_handle_active_discov_result(struct otActiveScanResult *result, void *con
 	/* LOG_INF("repeat_ot_discovery: %3d",repeat_ot_discovery); */
 	if (repeat_ot_discovery == 1) {
 		ot_discov_attempt_cnt++;
-		/* LOG_INF("calling OT discover for %d time",ot_discov_attempt_cnt); */
+		/* LOG_INF("calling Thread discover for %d time",ot_discov_attempt_cnt); */
 		ot_start_discovery();
 	}
 	k_sleep(K_MSEC(30));	
@@ -1350,7 +1331,8 @@ void ot_start_discovery(void) {
 const char* ot_check_device_state()
 {
 	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
+	/* LOG_INF("Current state of thread device: %s",
+				otThreadDeviceRoleToString(current_role)); */
 	return(otThreadDeviceRoleToString(current_role));
 }
 

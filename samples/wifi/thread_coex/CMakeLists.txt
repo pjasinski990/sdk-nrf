@@ -14,7 +14,8 @@ project(nrf_wifi_thread_coex)
 add_subdirectory(test)
 target_sources(app PRIVATE
 	src/ot_utils.c
-	src/ot_coex_test_functions.c
+	src/wifi_utils.c
+	src/ot_coex_functions.c
 	src/main.c
 )
 

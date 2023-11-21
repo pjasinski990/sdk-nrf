@@ -4,26 +4,25 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef OT_COEX_TEST_FUNCTIONS_
-#define OT_COEX_TEST_FUNCTIONS_
+#ifndef OT_COEX_FUNCTIONS_
+#define OT_COEX_FUNCTIONS_
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(ot_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(ot_coex_functions, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <nrfx_clock.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
-
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
-
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/net/zperf.h>
 #include <zephyr/net/net_if.h>
@@ -33,12 +32,11 @@ LOG_MODULE_REGISTER(ot_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* For net_sprint_ll_addr_buf */
 #include "net_private.h"
-#include <coex.h>
-#include <coex_struct.h>
-
+#include "coex.h"
+#include "coex_struct.h"
 #include "ot_utils.h" 
-
 #include "fmac_main.h"
+
 #define MAX_SSID_LEN 32
 #define WIFI_CONNECTION_TIMEOUT 30 /* in seconds */
 #define WIFI_DHCP_TIMEOUT 10 /* in seconds */
@@ -50,88 +48,71 @@ LOG_MODULE_REGISTER(ot_coex_test_func, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define HIGHEST_CHANNUM_24G 14
 
-#define KSLEEP_WIFI_CON_2SEC K_SECONDS(2)
+
 #define KSLEEP_WIFI_DISCON_2SEC K_SECONDS(2)
-//#define KSLEEP_WIFI_CON_10MSEC K_MSEC(10)
 #define KSLEEP_WIFI_CON_10MSEC K_SECONDS(1)
-//#define KSLEEP_WIFI_DISCON_10MSEC K_MSEC(10)
 #define KSLEEP_WIFI_DISCON_10MSEC K_SECONDS(1)
 #define KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC K_SECONDS(1)
 #define KSLEEP_WHILE_PERIP_CONN_CHECK_1SEC K_SECONDS(1)
-#define KSLEEP_ADV_START_1SEC K_SECONDS(1)
-#define KSLEEP_SCAN_START_1SEC K_SECONDS(1)
-//#define KSLEEP_WHILE_DISCON_CLIENT_2SEC K_SECONDS(2)
 
-extern uint32_t repeat_ot_discovery;
-extern uint32_t ot_discov_attempt_cnt;
-extern uint32_t ot_discov_success_cnt;
-extern uint32_t ot_discov_no_result_cnt;
 
 static uint32_t wifi_scan_cnt_24g;
 static uint32_t wifi_scan_cnt_5g;
 extern uint32_t wifi_scan_cmd_cnt;
+uint64_t wifi_scan_start_time;
+uint64_t wifi_scan_time;
+uint32_t print_wifi_scan_time;
 
 static uint32_t wifi_conn_attempt_cnt;
 static uint32_t wifi_conn_success_cnt;
 static uint32_t wifi_conn_fail_cnt;
 static uint32_t wifi_conn_timeout_cnt;
+static uint32_t wifi_conn_cnt_stability;
 static uint32_t wifi_dhcp_timeout_cnt;
 
+extern uint32_t wifi_disconn_no_conn_cnt;
+extern uint32_t wifi_disconn_fail_cnt;
+extern uint32_t wifi_disconn_success_cnt;
 static uint32_t wifi_disconn_attempt_cnt;
-static uint32_t wifi_disconn_success_cnt;
-static uint32_t wifi_disconn_fail_cnt;
-static uint32_t wifi_disconn_no_conn_cnt;
-
-static uint32_t wifi_conn_cnt_stability;
 static uint32_t wifi_disconn_cnt_stability;
 
 static uint8_t wait4_peer_wifi_client_to_start_tp_test;
 
-extern bool ot_server_connected;
-extern bool ot_client_connected;
-uint8_t wait4_peer_ot2_start_connection;
-uint32_t run_ot_client_wait_in_conn;
-
-extern uint32_t ot_supervision_timeout;
-
-
+extern uint32_t ot_discov_attempt_cnt;
+extern uint32_t ot_discov_success_cnt;
+extern uint32_t ot_discov_no_result_cnt;
+extern uint32_t repeat_ot_discovery;
+uint32_t ot_discov_timeout;
+uint32_t ot_discov_attempts_before_test_starts;
 
 extern uint32_t ot_connection_attempt_cnt;
 extern uint32_t ot_connection_success_cnt;
-
+uint8_t wait4_peer_ot2_start_connection;
+uint32_t ot_conn_attempts_before_test_starts;
+uint32_t run_ot_client_wait_in_conn;
+extern bool ot_server_connected;
+extern bool ot_client_connected;
 extern uint32_t ot_disconnection_attempt_cnt;
 extern uint32_t ot_disconnection_success_cnt;
 extern uint32_t ot_disconnection_fail_cnt;
 extern uint32_t ot_discon_no_conn_cnt;
 extern uint32_t ot_discon_no_conn;
-
 extern uint32_t ot_disconn_cnt_stability;
-
-static struct net_mgmt_event_callback wifi_sta_mgmt_cb;
-static struct net_mgmt_event_callback net_addr_mgmt_cb;
 
 static struct sockaddr_in in4_addr_my = {
 	.sin_family = AF_INET,
 	.sin_port = htons(CONFIG_NET_CONFIG_PEER_IPV4_PORT),
 };
 
-#define WIFI_MGMT_EVENTS (NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT)
 
-/**
- * @brief Handle net management events
- *
- * @return No return value.
- */
-void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
-		struct net_if *iface);
 
-/**
- * @brief Handle Wi-Fi management events
- *
- * @return No return value.
- */
-void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
-		struct net_if *iface);
+///**
+// * @brief Handle Wi-Fi management events
+// *
+// * @return No return value.
+// */
+//void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+//		struct net_if *iface);
 
 static uint32_t scan_result_count;
 
@@ -150,7 +131,7 @@ void rpu_disable(void);
 void run_ot_benchmark(void);
 
 /**
- * @brief OT discovery test run
+ * @brief Thread discovery test run
  *
  * @return None
  */
@@ -213,7 +194,7 @@ int run_wifi_traffic_udp(void);
 int run_wifi_traffic_tcp(void);
 
 /**
- * @brief start OT connection/traffic using thread start
+ * @brief start Thread connection/traffic using thread start
  *
  * @return None
  */
@@ -233,7 +214,7 @@ void start_wifi_activity(void);
  */
 void check_wifi_traffic(void);
 /**
- * @brief Run OT traffic using thread join
+ * @brief Run Thread traffic using thread join
  *
  * @return None
  */
@@ -245,7 +226,7 @@ void run_ot_activity(void);
  */
 void wifi_disconnection(void);
 /**
- * @brief Exit OT throughput test
+ * @brief Exit Thread throughput test
  *
  * @return None
  */
@@ -467,51 +448,18 @@ void wifi_scan_test_run(void);
 void wifi_connection_test_run(void);
 
 /**
- * @brief Start OT advertisement
+ * @brief Start Thread advertisement
  *
  * @return None
  */
 void adv_start(void);
 
 /**
- * @brief Start OT scan
+ * @brief Start Thread scan
  *
  * @return None
  */
 void scan_start(void);
-
-/**
- * @brief Callback for Wi-Fi DHCP IP address
- *
- * @return None
- */
-void print_dhcp_ip(struct net_mgmt_event_callback *cb);
-/**
- * @brief Callback for Wi-Fi connection result
- *
- * @return No return value.
- */
-void handle_wifi_connect_result(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi disconnection result
- *
- * @return No return value.
- */
-void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb);
-/**
- * @brief Callback for Wi-Fi scan result
- *
- * @return No return value.
- */
-void handle_wifi_scan_result(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi scan done
- *
- * @return No return value.
- */
-void handle_wifi_scan_done(struct net_mgmt_event_callback *cb);
 
 /**
  * @brief Callback for Wi-Fi DHCP IP addreds assigned
@@ -527,7 +475,7 @@ void print_dhcp_ip(struct net_mgmt_event_callback *cb);
 void print_common_test_params(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 	bool is_ot_client);
 /**
- * @brief Print OT connection test parameters info
+ * @brief Print Thread connection test parameters info
  *
  * @return None
  */
@@ -567,4 +515,4 @@ void print_ot_connection_test_params(bool is_ot_client);
 				     uint64_t twt_interval);
 #endif
 
-#endif /* OT_COEX_TEST_FUNCTIONS_ */
+#endif /* OT_COEX_FUNCTIONS_ */

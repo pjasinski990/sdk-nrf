@@ -9,21 +9,42 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <inttypes.h>
+
+#include "zephyr/net/openthread.h"
+
+#include <openthread/instance.h>
+#include <version.h>
+#include <openthread/config.h>
+#include <openthread/cli.h>
+#include <openthread/diag.h>
+#include <openthread/error.h>
+#include <openthread/joiner.h>
+#include <openthread/link.h>
+#include <openthread/tasklet.h>
+#include <openthread/platform/logging.h>
+#include <openthread/dataset_ftd.h>
+#include <openthread/thread.h>
 
 #include <openthread/platform/radio.h>
 
 #define TXPOWER_INIT_VALUE 127
 #define RSSI_INIT_VALUE 127
 
+
+
 /**
- * Initialize OT throughput test
+ * Initialize Thread throughput test
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int ot_throughput_test_init(bool is_ot_client);
 
 /**
- * @brief Run OT throughput test
+ * @brief Run Thread throughput test
  *
  * @return Zero on success or (negative) error code otherwise.
  */
@@ -41,13 +62,13 @@ void ot_discovery_test_run(void);
 void ot_conn_test_run(void);
 
 /**
- * @brief Exit OT throughput test
+ * @brief Exit Thread throughput test
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int ot_tput_test_exit(void);
 /**
- * Initialize OT scan --> connection test
+ * Initialize Thread scan --> connection test
  *
  * @return Zero on success or (negative) error code otherwise.
  */
@@ -61,35 +82,35 @@ int ot_connection_init(bool is_ot_client);
 int ot_disconnect_client(void);
 
 /**
- * @brief Start OT advertisement
+ * @brief Start Thread advertisement
  *
  * @return None
  */
 void adv_start(void);
 
 /**
- * @brief Start OT scan
+ * @brief Start Thread scan
  *
  * @return None
  */
 void scan_start(void);
 
 /**
- * @brief Read OT RSSI
+ * @brief Read Thread RSSI
  *
  * @return None
  */
 void read_conn_rssi(uint16_t handle, int8_t *rssi);
 
 /**
- * @brief Set OT Tx power
+ * @brief Set Thread Tx power
  *
  * @return None
  */
 void set_tx_power(uint8_t handle_type, uint16_t handle, int8_t tx_pwr_lvl);
 
 /**
- * @brief Get OT Tx power
+ * @brief Get Thread Tx power
  *
  * @return None
  */
@@ -153,16 +174,16 @@ void thread_stop_commissioner(void);
  *
  * @return None.
  */
-void thread_start_joiner(const char *pskd);
-//void thread_start_joiner(const char *pskd, otInstance *instance);
-/* void thread_start_joiner(const char *pskd, otInstance *instance, struct openthread_context *context); */
+void ot_start_joiner(const char *pskd);
+//void ot_start_joiner(const char *pskd, otInstance *instance);
+/* void ot_start_joiner(const char *pskd, otInstance *instance, struct openthread_context *context); */
 
 /**
  * @brief Stop thread joiner
  *
  * @return None.
  */
-void thread_stop_joiner(void);
+void ot_stop_joiner(void);
 
 /**
  * @brief Set thread network key to null

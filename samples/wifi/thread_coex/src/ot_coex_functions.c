@@ -4,36 +4,98 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/** @file
- * @brief Wi-Fi and thread coexistence test functions
- */
-
-#include "ot_coex_test_functions.h"
-
-int8_t wifi_rssi = RSSI_INIT_VALUE;
-uint64_t wifi_scan_start_time;
-uint64_t wifi_scan_time;
-uint32_t print_wifi_scan_time;
-static int print_wifi_conn_status_once = 1;
-
-uint32_t ot_discov_timeout;
-uint32_t ot_discov_attempts_before_test_starts;
-
-uint32_t ot_datalen_failed;
-uint32_t ot_phy_update_failed;
-uint32_t ot_datalen_timeout;
-uint32_t ot_phy_update_timeout;
-uint32_t ot_conn_param_update_failed;
-uint32_t ot_conn_param_update_timeout;
-uint32_t ot_conn_attempts_before_test_starts;
+#include "ot_coex_functions.h"
 
 #ifdef CONFIG_TWT_ENABLE
-	#define STATUS_POLLING_MS   300
-	#define TWT_RESP_TIMEOUT_S    20
-	bool twt_resp_received;
+	#define STATUS_POLLING_MS 300
+	#define TWT_RESP_TIMEOUT_S 20
+	extern bool twt_resp_received;
+	extern bool twt_supported;
 
-	static bool twt_supported;
-	
+//	static int setup_twt(void)
+//	{
+//		struct net_if *iface = net_if_get_first_wifi();
+//		struct wifi_twt_params params = { 0 };
+//		int ret;
+//
+//		params.operation = WIFI_TWT_SETUP;
+//		params.negotiation_type = WIFI_TWT_INDIVIDUAL;
+//		params.setup_cmd = WIFI_TWT_SETUP_CMD_REQUEST;
+//		params.dialog_token = 1;
+//		params.flow_id = 1;
+//		params.setup.responder = 0;
+//		params.setup.trigger = IS_ENABLED(CONFIG_TWT_TRIGGER_ENABLE);
+//		params.setup.implicit = 1;
+//		params.setup.announce = IS_ENABLED(CONFIG_TWT_ANNOUNCED_MODE);
+//		params.setup.twt_wake_interval = CONFIG_TWT_WAKE_INTERVAL;
+//		params.setup.twt_interval = CONFIG_TWT_INTERVAL;
+//
+//		ret = net_mgmt(NET_REQUEST_WIFI_TWT, iface, &params, sizeof(params));
+//		if (ret) {
+//			LOG_INF("TWT setup failed: %d", ret);
+//			return ret;
+//		}
+//
+//		LOG_INF("TWT setup requested");
+//
+//		return 0;
+//	}
+//
+//	static int teardown_twt(void)
+//	{
+//		struct net_if *iface = net_if_get_first_wifi();
+//		struct wifi_twt_params params = { 0 };
+//		int ret;
+//
+//		params.operation = WIFI_TWT_TEARDOWN;
+//		params.negotiation_type = WIFI_TWT_INDIVIDUAL;
+//		params.setup_cmd = WIFI_TWT_TEARDOWN;
+//		params.dialog_token = 1;
+//		params.flow_id = 1;
+//
+//		ret = net_mgmt(NET_REQUEST_WIFI_TWT, iface, &params, sizeof(params));
+//		if (ret) {
+//			LOG_ERR("%s with %s failed, reason : %s",
+//				wifi_twt_operation2str[params.operation],
+//				wifi_twt_negotiation_type2str[params.negotiation_type],
+//				get_twt_err_code_str(params.fail_reason));
+//			return ret;
+//		}
+//
+//		LOG_INF("TWT teardown success");
+//
+//		return 0;
+//	}
+//	static void handle_wifi_twt_event(struct net_mgmt_event_callback *cb)
+//	{
+//		const struct wifi_twt_params *resp =
+//			(const struct wifi_twt_params *)cb->info;
+//
+//		if (resp->operation == WIFI_TWT_TEARDOWN) {
+//			LOG_INF("TWT teardown received for flow ID %d\n",
+//			      resp->flow_id);
+//			return;
+//		}
+//
+//		if (resp->resp_status == WIFI_TWT_RESP_RECEIVED) {
+//			twt_resp_received = 1;
+//			LOG_INF("TWT response: %s",
+//			      wifi_twt_setup_cmd2str[resp->setup_cmd]);
+//			LOG_INF("== TWT negotiated parameters ==");
+//			print_twt_params(resp->dialog_token,
+//					 resp->flow_id,
+//					 resp->negotiation_type,
+//					 resp->setup.responder,
+//					 resp->setup.implicit,
+//					 resp->setup.announce,
+//					 resp->setup.trigger,
+//					 resp->setup.twt_wake_interval,
+//					 resp->setup.twt_interval);
+//		} else {
+//			LOG_INF("TWT response timed out\n");
+//		}
+//	}
+
 	static int wait_for_twt_resp_received(void)
 	{
 		int i, timeout_polls = (TWT_RESP_TIMEOUT_S * 1000) / STATUS_POLLING_MS;
@@ -46,90 +108,6 @@ uint32_t ot_conn_attempts_before_test_starts;
 		}
 
 		return 0;
-	}
-
-	static int setup_twt(void)
-	{
-		struct net_if *iface = net_if_get_first_wifi();
-		struct wifi_twt_params params = { 0 };
-		int ret;
-
-		params.operation = WIFI_TWT_SETUP;
-		params.negotiation_type = WIFI_TWT_INDIVIDUAL;
-		params.setup_cmd = WIFI_TWT_SETUP_CMD_REQUEST;
-		params.dialog_token = 1;
-		params.flow_id = 1;
-		params.setup.responder = 0;
-		params.setup.trigger = IS_ENABLED(CONFIG_TWT_TRIGGER_ENABLE);
-		params.setup.implicit = 1;
-		params.setup.announce = IS_ENABLED(CONFIG_TWT_ANNOUNCED_MODE);
-		params.setup.twt_wake_interval = CONFIG_TWT_WAKE_INTERVAL;
-		params.setup.twt_interval = CONFIG_TWT_INTERVAL;
-
-		ret = net_mgmt(NET_REQUEST_WIFI_TWT, iface, &params, sizeof(params));
-		if (ret) {
-			LOG_INF("TWT setup failed: %d", ret);
-			return ret;
-		}
-
-		LOG_INF("TWT setup requested");
-
-		return 0;
-	}
-
-	static int teardown_twt(void)
-	{
-		struct net_if *iface = net_if_get_first_wifi();
-		struct wifi_twt_params params = { 0 };
-		int ret;
-
-		params.operation = WIFI_TWT_TEARDOWN;
-		params.negotiation_type = WIFI_TWT_INDIVIDUAL;
-		params.setup_cmd = WIFI_TWT_TEARDOWN;
-		params.dialog_token = 1;
-		params.flow_id = 1;
-
-		ret = net_mgmt(NET_REQUEST_WIFI_TWT, iface, &params, sizeof(params));
-		if (ret) {
-			LOG_ERR("%s with %s failed, reason : %s",
-				wifi_twt_operation2str[params.operation],
-				wifi_twt_negotiation_type2str[params.negotiation_type],
-				get_twt_err_code_str(params.fail_reason));
-			return ret;
-		}
-
-		LOG_INF("TWT teardown success");
-
-		return 0;
-	}
-	static void handle_wifi_twt_event(struct net_mgmt_event_callback *cb)
-	{
-		const struct wifi_twt_params *resp =
-			(const struct wifi_twt_params *)cb->info;
-
-		if (resp->operation == WIFI_TWT_TEARDOWN) {
-			LOG_INF("TWT teardown received for flow ID %d\n",
-			      resp->flow_id);
-			return;
-		}
-
-		if (resp->resp_status == WIFI_TWT_RESP_RECEIVED) {
-			twt_resp_received = 1;
-			LOG_INF("TWT response: %s",
-			      wifi_twt_setup_cmd2str[resp->setup_cmd]);
-			LOG_INF("== TWT negotiated parameters ==");
-			print_twt_params(resp->dialog_token,
-					 resp->flow_id,
-					 resp->negotiation_type,
-					 resp->setup.responder,
-					 resp->setup.implicit,
-					 resp->setup.announce,
-					 resp->setup.trigger,
-					 resp->setup.twt_wake_interval,
-					 resp->setup.twt_interval);
-		} else {
-			LOG_INF("TWT response timed out\n");
-		}
 	}
 	
 	void print_twt_params(uint8_t dialog_token, uint8_t flow_id,
@@ -160,134 +138,136 @@ uint32_t ot_conn_attempts_before_test_starts;
 	}
 
 #endif
-void memset_context(void)
-{
-	memset(&context, 0, sizeof(context));
-}
-
-int cmd_wifi_status(void)
-{
-	struct net_if *iface = net_if_get_first_wifi();
-
-	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, iface, &status,
-				sizeof(struct wifi_iface_status))) {
-		LOG_INF("Status request failed");
-
-		return -ENOEXEC;
-	}
-
-	#ifndef CONFIG_PRINTS_FOR_AUTOMATION
-		LOG_INF("Status: successful");
-		LOG_INF("==================");
-		LOG_INF("State: %s", wifi_state_txt(status.state));
-	#endif
-
-	if (status.state >= WIFI_STATE_ASSOCIATED) {
-		uint8_t mac_string_buf[sizeof("xx:xx:xx:xx:xx:xx")];
-
-		if (print_wifi_conn_status_once == 1) {
-
-			LOG_INF("Interface Mode: %s",
-				   wifi_mode_txt(status.iface_mode));
-			LOG_INF("Link Mode: %s",
-				   wifi_link_mode_txt(status.link_mode));
-			LOG_INF("SSID: %-32s", status.ssid);
-			LOG_INF("BSSID: %s",
-				   net_sprint_ll_addr_buf(
-					status.bssid, WIFI_MAC_ADDR_LEN,
-					mac_string_buf, sizeof(mac_string_buf)));
-			LOG_INF("Band: %s", wifi_band_txt(status.band));
-			LOG_INF("Channel: %d", status.channel);
-			LOG_INF("Security: %s", wifi_security_txt(status.security));
-			/* LOG_INF("MFP: %s", wifi_mfp_txt(status.mfp)); */
-			LOG_INF("WiFi RSSI: %d", status.rssi);
-#ifdef CONFIG_TWT_ENABLE
-			LOG_INF("TWT: %s", status.twt_capable ? "Supported" : "Not supported");
-
-			if (status.twt_capable) {
-				twt_supported = 1;
-			}
-#endif
-			print_wifi_conn_status_once++;
-		}
-		wifi_rssi = status.rssi;
-	}
-
-	return 0;
-}
 
 
-void wifi_net_mgmt_callback_functions(void)
-{
-	net_mgmt_init_event_callback(&wifi_sta_mgmt_cb, wifi_mgmt_event_handler,
-		WIFI_MGMT_EVENTS);
+//int cmd_wifi_status(void)
+//{
+//	struct net_if *iface = net_if_get_first_wifi();
+//
+//	if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, iface, &status,
+//				sizeof(struct wifi_iface_status))) {
+//		LOG_INF("Status request failed");
+//
+//		return -ENOEXEC;
+//	}
+//
+//	#ifndef CONFIG_PRINTS_FOR_AUTOMATION
+//		LOG_INF("Status: successful");
+//		LOG_INF("==================");
+//		LOG_INF("State: %s", wifi_state_txt(status.state));
+//	#endif
+//
+//	if (status.state >= WIFI_STATE_ASSOCIATED) {
+//		uint8_t mac_string_buf[sizeof("xx:xx:xx:xx:xx:xx")];
+//
+//		if (print_wifi_conn_status_once == 1) {
+//
+//			LOG_INF("Interface Mode: %s",
+//				   wifi_mode_txt(status.iface_mode));
+//			LOG_INF("Link Mode: %s",
+//				   wifi_link_mode_txt(status.link_mode));
+//			LOG_INF("SSID: %-32s", status.ssid);
+//			LOG_INF("BSSID: %s",
+//				   net_sprint_ll_addr_buf(
+//					status.bssid, WIFI_MAC_ADDR_LEN,
+//					mac_string_buf, sizeof(mac_string_buf)));
+//			LOG_INF("Band: %s", wifi_band_txt(status.band));
+//			LOG_INF("Channel: %d", status.channel);
+//			LOG_INF("Security: %s", wifi_security_txt(status.security));
+//			/* LOG_INF("MFP: %s", wifi_mfp_txt(status.mfp)); */
+//			LOG_INF("Wi-Fi RSSI: %d", status.rssi);
+//#ifdef CONFIG_TWT_ENABLE
+//			LOG_INF("TWT: %s", status.twt_capable ? "Supported" : "Not supported");
+//
+//			if (status.twt_capable) {
+//				twt_supported = 1;
+//			}
+//#endif
+//			print_wifi_conn_status_once++;
+//		}
+//		wifi_rssi = status.rssi;
+//	}
+//
+//	return 0;
+//}
 
-	net_mgmt_add_event_callback(&wifi_sta_mgmt_cb);
+//void memset_context(void)
+//{
+//	memset(&context, 0, sizeof(context));
+//}
+//
+//void wifi_net_mgmt_callback_functions(void)
+//{
+//	net_mgmt_init_event_callback(&wifi_sta_mgmt_cb, wifi_mgmt_event_handler,
+//		WIFI_MGMT_EVENTS);
+//
+//	net_mgmt_add_event_callback(&wifi_sta_mgmt_cb);
+//
+//	net_mgmt_init_event_callback(&net_addr_mgmt_cb, net_mgmt_event_handler,
+//		NET_EVENT_IPV4_DHCP_BOUND);
+//
+//	net_mgmt_add_event_callback(&net_addr_mgmt_cb);
+//
+//#ifdef CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT
+//	nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK, NRF_CLOCK_HFCLK_DIV_1);
+//#endif
+//
+//	LOG_INF("Starting %s with CPU frequency: %d MHz", CONFIG_BOARD, SystemCoreClock/MHZ(1));
+//
+//	k_sleep(K_SECONDS(1));
+//}
+//
+//
+//void wifi_init(void) {
+//
+//	memset_context();
+//	
+//	wifi_net_mgmt_callback_functions();
+//}
 
-	net_mgmt_init_event_callback(&net_addr_mgmt_cb, net_mgmt_event_handler,
-		NET_EVENT_IPV4_DHCP_BOUND);
+//void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+//		struct net_if *iface)
+//{
+//	switch (mgmt_event) {
+//	case NET_EVENT_IPV4_DHCP_BOUND:
+//		print_dhcp_ip(cb);
+//		break;
+//	default:
+//		break;
+//	}
+//}
 
-	net_mgmt_add_event_callback(&net_addr_mgmt_cb);
-
-#ifdef CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT
-	nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK, NRF_CLOCK_HFCLK_DIV_1);
-#endif
-
-	LOG_INF("Starting %s with CPU frequency: %d MHz", CONFIG_BOARD, SystemCoreClock/MHZ(1));
-
-	k_sleep(K_SECONDS(1));
-}
-
-void wifi_init(void) {
-
-	memset_context();
-	
-	wifi_net_mgmt_callback_functions();
-}
-
-void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
-		struct net_if *iface)
-{
-	switch (mgmt_event) {
-	case NET_EVENT_IPV4_DHCP_BOUND:
-		print_dhcp_ip(cb);
-		break;
-	default:
-		break;
-	}
-}
-
-void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb,
-		uint32_t mgmt_event, struct net_if *iface)
-{
-	const struct device *dev = iface->if_dev->dev;
-	struct nrf_wifi_vif_ctx_zep *vif_ctx_zep = NULL;
-
-	vif_ctx_zep = dev->data;
-
-	switch (mgmt_event) {
-	case NET_EVENT_WIFI_CONNECT_RESULT:
-		handle_wifi_connect_result(cb);
-		break;
-	case NET_EVENT_WIFI_DISCONNECT_RESULT:
-		handle_wifi_disconnect_result(cb);
-		break;
-	case NET_EVENT_WIFI_SCAN_RESULT:
-		vif_ctx_zep->scan_in_progress = 0;
-		handle_wifi_scan_result(cb);
-		break;
-	case NET_EVENT_WIFI_SCAN_DONE:
-		handle_wifi_scan_done(cb);
-		break;
-#ifdef CONFIG_TWT_ENABLE
-	case NET_EVENT_WIFI_TWT:
-		handle_wifi_twt_event(cb);
-	break;
-#endif
-	default:
-		break;
-	}
-}
+//void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb,
+//		uint32_t mgmt_event, struct net_if *iface)
+//{
+//	const struct device *dev = iface->if_dev->dev;
+//	struct nrf_wifi_vif_ctx_zep *vif_ctx_zep = NULL;
+//
+//	vif_ctx_zep = dev->data;
+//
+//	switch (mgmt_event) {
+//	case NET_EVENT_WIFI_CONNECT_RESULT:
+//		handle_wifi_connect_result(cb);
+//		break;
+//	case NET_EVENT_WIFI_DISCONNECT_RESULT:
+//		handle_wifi_disconnect_result(cb);
+//		break;
+//	case NET_EVENT_WIFI_SCAN_RESULT:
+//		vif_ctx_zep->scan_in_progress = 0;
+//		handle_wifi_scan_result(cb);
+//		break;
+//	case NET_EVENT_WIFI_SCAN_DONE:
+//		handle_wifi_scan_done(cb);
+//		break;
+//#ifdef CONFIG_TWT_ENABLE
+//	case NET_EVENT_WIFI_TWT:
+//		handle_wifi_twt_event(cb);
+//	break;
+//#endif
+//	default:
+//		break;
+//	}
+//}
 
 void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
 {
@@ -398,109 +378,109 @@ void print_dhcp_ip(struct net_mgmt_event_callback *cb)
 	k_sem_give(&wait_for_next);
 }
 
-int __wifi_args_to_params(struct wifi_connect_req_params *params)
-{
-	params->timeout = SYS_FOREVER_MS;
+//int __wifi_args_to_params(struct wifi_connect_req_params *params)
+//{
+//	params->timeout = SYS_FOREVER_MS;
+//
+//	/* SSID */
+//	params->ssid = CONFIG_STA_SSID;
+//	params->ssid_length = strlen(params->ssid);
+//
+//#if defined(CONFIG_STA_KEY_MGMT_WPA2)
+//	params->security = 1;
+//#elif defined(CONFIG_STA_KEY_MGMT_WPA2_256)
+//	params->security = 2;
+//#elif defined(CONFIG_STA_KEY_MGMT_WPA3)
+//	params->security = 3;
+//#else
+//	params->security = 0;
+//#endif
+//
+//#if !defined(CONFIG_STA_KEY_MGMT_NONE)
+//	params->psk = CONFIG_STA_PASSWORD;
+//	params->psk_length = strlen(params->psk);
+//#endif
+//	params->channel = WIFI_CHANNEL_ANY;
+//
+//	/* MFP (optional) */
+//	params->mfp = WIFI_MFP_OPTIONAL;
+//
+//	return 0;
+//}
 
-	/* SSID */
-	params->ssid = CONFIG_STA_SSID;
-	params->ssid_length = strlen(params->ssid);
-
-#if defined(CONFIG_STA_KEY_MGMT_WPA2)
-	params->security = 1;
-#elif defined(CONFIG_STA_KEY_MGMT_WPA2_256)
-	params->security = 2;
-#elif defined(CONFIG_STA_KEY_MGMT_WPA3)
-	params->security = 3;
-#else
-	params->security = 0;
-#endif
-
-#if !defined(CONFIG_STA_KEY_MGMT_NONE)
-	params->psk = CONFIG_STA_PASSWORD;
-	params->psk_length = strlen(params->psk);
-#endif
-	params->channel = WIFI_CHANNEL_ANY;
-
-	/* MFP (optional) */
-	params->mfp = WIFI_MFP_OPTIONAL;
-
-	return 0;
-}
-
-int cmd_wifi_scan(void)
-{
-	struct net_if *iface = net_if_get_first_wifi();
-	struct wifi_scan_params params = {0};
-
-	if (net_mgmt(NET_REQUEST_WIFI_SCAN, iface, &params, sizeof(struct wifi_scan_params))) {
-		LOG_ERR("Scan request failed");
-		return -ENOEXEC;
-	}
-#ifdef CONFIG_DEBUG_PRINT_WIFI_SCAN_INFO
-	LOG_INF("Scan requested");
-#endif
-	return 0;
-}
-
-int wifi_connect(void)
-{
-	struct net_if *iface = net_if_get_first_wifi();
-	static struct wifi_connect_req_params cnx_params = {0};
-
-	/* LOG_INF("Connection requested"); */
-	__wifi_args_to_params(&cnx_params);
-
-	if (net_mgmt(NET_REQUEST_WIFI_CONNECT, iface,
-			&cnx_params, sizeof(struct wifi_connect_req_params))) {
-		LOG_ERR("Wi-Fi Connection request failed");
-		return -ENOEXEC;
-	}
-	return 0;
-}
-
-int wifi_disconnect(void)
-{
-	struct net_if *iface = net_if_get_first_wifi();
-	int status;
-
-	context.disconnect_requested = true;
-
-	status = net_mgmt(NET_REQUEST_WIFI_DISCONNECT, iface, NULL, 0);
-
-	if (status) {
-		context.disconnect_requested = false;
-
-		if (status == -EALREADY) {
-			/* LOG_ERR("Already disconnected"); */
-			wifi_disconn_no_conn_cnt++;
-		} else {
-			/* LOG_ERR("Disconnect request failed"); */
-			wifi_disconn_fail_cnt++;
-			return -ENOEXEC;
-		}
-	} else {
-		wifi_disconn_success_cnt++;
-	}
-	return 0;
-}
-
-int parse_ipv4_addr(char *host, struct sockaddr_in *addr)
-{
-	int ret;
-
-	if (!host) {
-		return -EINVAL;
-	}
-	ret = net_addr_pton(AF_INET, host, &addr->sin_addr);
-	if (ret < 0) {
-		LOG_ERR("Invalid IPv4 address %s", host);
-		return -EINVAL;
-	}
-	LOG_INF("Wi-Fi peer IPv4 address %s", host);
-
-	return 0;
-}
+//int cmd_wifi_scan(void)
+//{
+//	struct net_if *iface = net_if_get_first_wifi();
+//	struct wifi_scan_params params = {0};
+//
+//	if (net_mgmt(NET_REQUEST_WIFI_SCAN, iface, &params, sizeof(struct wifi_scan_params))) {
+//		LOG_ERR("Scan request failed");
+//		return -ENOEXEC;
+//	}
+//#ifdef CONFIG_DEBUG_PRINT_WIFI_SCAN_INFO
+//	LOG_INF("Scan requested");
+//#endif
+//	return 0;
+//}
+//
+//int wifi_connect(void)
+//{
+//	struct net_if *iface = net_if_get_first_wifi();
+//	static struct wifi_connect_req_params cnx_params = {0};
+//
+//	/* LOG_INF("Connection requested"); */
+//	__wifi_args_to_params(&cnx_params);
+//
+//	if (net_mgmt(NET_REQUEST_WIFI_CONNECT, iface,
+//			&cnx_params, sizeof(struct wifi_connect_req_params))) {
+//		LOG_ERR("Wi-Fi Connection request failed");
+//		return -ENOEXEC;
+//	}
+//	return 0;
+//}
+//
+//int wifi_disconnect(void)
+//{
+//	struct net_if *iface = net_if_get_first_wifi();
+//	int status;
+//
+//	context.disconnect_requested = true;
+//
+//	status = net_mgmt(NET_REQUEST_WIFI_DISCONNECT, iface, NULL, 0);
+//
+//	if (status) {
+//		context.disconnect_requested = false;
+//
+//		if (status == -EALREADY) {
+//			/* LOG_ERR("Already disconnected"); */
+//			wifi_disconn_no_conn_cnt++;
+//		} else {
+//			/* LOG_ERR("Disconnect request failed"); */
+//			wifi_disconn_fail_cnt++;
+//			return -ENOEXEC;
+//		}
+//	} else {
+//		wifi_disconn_success_cnt++;
+//	}
+//	return 0;
+//}
+//
+//int parse_ipv4_addr(char *host, struct sockaddr_in *addr)
+//{
+//	int ret;
+//
+//	if (!host) {
+//		return -EINVAL;
+//	}
+//	ret = net_addr_pton(AF_INET, host, &addr->sin_addr);
+//	if (ret < 0) {
+//		LOG_ERR("Invalid IPv4 address %s", host);
+//		return -EINVAL;
+//	}
+//	LOG_INF("Wi-Fi peer IPv4 address %s", host);
+//
+//	return 0;
+//}
 
 int wait_for_next_event(const char *event_name, int timeout)
 {
@@ -934,7 +914,7 @@ void wifi_connection_test_run(void)
 
 void start_ot_activity(void)
 {
-	/* Start OT connection or throughput based on the test case */
+	/* Start Thread connection or throughput based on the test case */
 	#ifdef ENABLE_OT_DISCOV_TEST
 		k_thread_start(run_ot_discovery);
 	#endif
@@ -948,7 +928,7 @@ void start_ot_activity(void)
 
 void run_ot_activity(void)
 {
-	/* In case OT is server, skip running OT connection/traffic */
+	/* In case Thread is server, skip running Thread connection/traffic */
 	#ifdef ENABLE_OT_DISCOV_TEST
 		k_thread_join(run_ot_discovery, K_FOREVER);
 	#endif
@@ -977,7 +957,7 @@ void print_common_test_params(bool is_ant_mode_sep, bool test_thread, bool test_
 	LOG_INF("-------------------------------- Test parameters");
 
 	if (test_wifi && test_thread) {
-		LOG_INF("Running Wi-Fi and OT tests");
+		LOG_INF("Running Wi-Fi and Thread tests");
 	} else {
 		if (test_wifi) {
 			LOG_INF("Running Wi-Fi only test");
@@ -1012,16 +992,16 @@ void print_common_test_params(bool is_ant_mode_sep, bool test_thread, bool test_
 void print_ot_connection_test_params(bool is_ot_client)
 {
 	//if (is_ot_client) {
-	//	LOG_INF("OT Scan interval max %u\n", CONFIG_BT_LE_SCAN_INTERVAL);
-	//	LOG_INF("OT Scan window %u\n", CONFIG_BT_LE_SCAN_WINDOW);
+	//	LOG_INF("Thread Scan interval max %u\n", CONFIG_BT_LE_SCAN_INTERVAL);
+	//	LOG_INF("Thread Scan window %u\n", CONFIG_BT_LE_SCAN_WINDOW);
 	//} else {
-	//	LOG_INF("OT advertisement interval min %u\n", CONFIG_BT_GAP_ADV_FAST_INT_MIN_2);
-	//	LOG_INF("OT advertisement interval max %u\n", CONFIG_BT_GAP_ADV_FAST_INT_MAX_2);
+	//	LOG_INF("Thread advertisement interval min %u\n", CONFIG_BT_GAP_ADV_FAST_INT_MIN_2);
+	//	LOG_INF("Thread advertisement interval max %u\n", CONFIG_BT_GAP_ADV_FAST_INT_MAX_2);
 	//}
-	//LOG_INF("OT connection interval min %u\n", CONFIG_BT_INTERVAL_MIN);
-	//LOG_INF("OT connection interval max %u\n", CONFIG_BT_INTERVAL_MAX);
-	//LOG_INF("OT supervision timeout %u\n", CONFIG_BT_SUPERVISION_TIMEOUT);
-	//LOG_INF("OT connection latency %u\n", CONFIG_BT_CONN_LATENCY);
+	//LOG_INF("Thread connection interval min %u\n", CONFIG_BT_INTERVAL_MIN);
+	//LOG_INF("Thread connection interval max %u\n", CONFIG_BT_INTERVAL_MAX);
+	//LOG_INF("Thread supervision timeout %u\n", CONFIG_BT_SUPERVISION_TIMEOUT);
+	//LOG_INF("Thread connection latency %u\n", CONFIG_BT_CONN_LATENCY);
 }
 
 
@@ -1076,21 +1056,21 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 #endif/* CONFIG_NRF700X_BT_COEX */
 	}
 	if (test_thread) {
-		/* Initialize OT by selecting role and connect it to peer device. */
+		/* Initialize Thread by selecting role and connect it to peer device. */
 		ot_discov_attempt_cnt++;
 		ot_initialization();
 		k_sleep(K_SECONDS(3));
 
 		if (is_ot_client) {
-			/**If OT is client, disconnect the connection.
+			/**If Thread is client, disconnect the connection.
 			 * Connection and disconnection happens in loop later.
 			 */
 			//ot_disconnection_attempt_cnt++;
 			//ot_disconnect_client();
 		} 
-		//note: OT connection is done in default client role. 
+		//note: Thread connection is done in default client role. 
 		//else {
-		//	/**If OT is server, wait until peer OT client
+		//	/**If Thread is server, wait until peer Thread client
 		//	 *  initiates the connection, DUT is connected to peer client
 		//	 *  and update the PHY parameters.
 		//	 */
@@ -1106,13 +1086,13 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 	if (test_thread) {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 		/* peer client waits on this in automation */
-		LOG_INF("Run OT client");
+		LOG_INF("Run Thread client");
 		k_sleep(K_SECONDS(1));
 #endif
 
 		//if (!is_ot_client) {
 		//	LOG_INF("DUT is in server role.");
-		//	LOG_INF("Check for OT connection counts on peer OT side.");
+		//	LOG_INF("Check for Thread connection counts on peer Thread side.");
 		//}
 	}
 
@@ -1124,12 +1104,12 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 	repeat_ot_discovery = 1;
 	test_start_time = k_uptime_get_32();
 
-	/* Begin OT discovery for a period of OT test duration */
+	/* Begin Thread discovery for a period of Thread test duration */
 	if (test_thread) {
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 		}
 	}
 
@@ -1138,13 +1118,13 @@ int wifi_scan_ot_discov(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 		start_wifi_activity();
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* Run OT activity and wait for the test duration */
+			/* Run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} else {
-			/** If DUT OT is in server role then peer OT runs the activity.
+			/** If DUT Thread is in server role then peer Thread runs the activity.
 			 *wait for test duration
 			 */
 			while (1) {
@@ -1212,18 +1192,18 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 	if (is_ot_client) {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: wifi_scan_ot_connection");
-			LOG_INF("Wi-Fi connected scan, OT client");
+			LOG_INF("Wi-Fi connected scan, Thread client");
 		} else {
 			LOG_INF("Test case: wifi_scan_ot_connection");
-			LOG_INF("Wi-Fi scan, OT client");
+			LOG_INF("Wi-Fi scan, Thread client");
 		}
 	} else {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: wifi_scan_ot_connection");
-			LOG_INF("Wi-Fi connected scan, OT server");
+			LOG_INF("Wi-Fi connected scan, Thread server");
 		} else {
 			LOG_INF("Test case: wifi_scan_ot_connection");
-			LOG_INF("Wi-Fi scan, OT server");
+			LOG_INF("Wi-Fi scan, Thread server");
 		}
 	}
 
@@ -1248,21 +1228,21 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 		#endif/* CONFIG_NRF700X_BT_COEX */
 	}
 	if (test_thread) {
-		/* Initialize OT by selecting role and connect it to peer device. */
+		/* Initialize Thread by selecting role and connect it to peer device. */
 		ot_connection_attempt_cnt++;
 		ot_connection_init(is_ot_client);
 		k_sleep(K_SECONDS(3));
 
 		if (is_ot_client) {
-			/**If OT is client, disconnect the connection.
+			/**If Thread is client, disconnect the connection.
 			 * Connection and disconnection happens in loop later.
 			 */
 			ot_disconnection_attempt_cnt++;
 			ot_disconnect_client();
 		}
-		// OT connection is done using default client role
+		// Thread connection is done using default client role
 		//else {
-		//	/**If OT is server, wait until peer OT client
+		//	/**If Thread is server, wait until peer Thread client
 		//	 *  initiates the connection, DUT is connected to peer client
 		//	 *  and update the PHY parameters.
 		//	 */
@@ -1278,13 +1258,13 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 	if (test_thread) {
 		#ifdef CONFIG_PRINTS_FOR_AUTOMATION
 		/* peer client waits on this in automation */
-		LOG_INF("Run OT client");
+		LOG_INF("Run Thread client");
 		k_sleep(K_SECONDS(1));
 		#endif
 
 		//if (!is_ot_client) {
 		//	LOG_INF("DUT is in server role.");
-		//	LOG_INF("Check for OT connection counts on peer OT side.");
+		//	LOG_INF("Check for Thread connection counts on peer Thread side.");
 		//}
 	}
 
@@ -1295,12 +1275,12 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 	repeat_wifi_scan = 1;
 	test_start_time = k_uptime_get_32();
 
-	/* Begin OT conections and disconnections for a period of OT test duration */
+	/* Begin Thread conections and disconnections for a period of Thread test duration */
 	if (test_thread) {
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 		}
 	}
 
@@ -1309,13 +1289,13 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 		start_wifi_activity();
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* Run OT activity and wait for the test duration */
+			/* Run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} else {
-			/** If DUT OT is in server role then peer OT runs the activity.
+			/** If DUT Thread is in server role then peer Thread runs the activity.
 			 *wait for test duration
 			 */
 			while (1) {
@@ -1361,26 +1341,6 @@ int wifi_scan_ot_connection(bool is_ant_mode_sep, bool test_thread, bool test_wi
 			ot_disconnection_fail_cnt);
 		LOG_INF("ot_discon_no_conn_cnt = %u",
 			ot_discon_no_conn_cnt);
-		//} else {
-		/*
-		LOG_INF("check peer device for result counts");
-		LOG_INF("Counts printed below are for information purpose");
-		LOG_INF("and not actual results.");
-
-		LOG_INF("ot_datalen_failed = %u",
-			ot_datalen_failed);
-		LOG_INF("ot_phy_update_failed = %u",
-			ot_phy_update_failed);
-		LOG_INF("ot_datalen_timeout = %u",
-			ot_datalen_timeout);
-
-		LOG_INF("ot_phy_update_timeout = %u",
-			ot_phy_update_timeout);
-		LOG_INF("ot_conn_param_update_failed = %u",
-			ot_conn_param_update_failed);
-		LOG_INF("ot_conn_param_update_timeout = %u",
-			ot_conn_param_update_timeout);
-		*/
 	}
 	if (test_wifi) {
 		LOG_INF("wifi_scan_cmd_cnt = %u", wifi_scan_cmd_cnt);
@@ -1405,18 +1365,18 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 	if (is_ot_client) {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: wifi_scan_ot_tput");
-			LOG_INF("Wi-Fi connected scan, OT client");
+			LOG_INF("Wi-Fi connected scan, Thread client");
 		} else {
 			LOG_INF("Test case: wifi_scan_ot_tput");
-			LOG_INF("Wi-Fi scan, OT client");
+			LOG_INF("Wi-Fi scan, Thread client");
 		}
 	} else {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: wifi_scan_ot_tput");
-			LOG_INF("Wi-Fi connected scan, OT server");
+			LOG_INF("Wi-Fi connected scan, Thread server");
 		} else {
 			LOG_INF("Test case: wifi_scan_ot_tput");
-			LOG_INF("Wi-Fi scan, OT server");
+			LOG_INF("Wi-Fi scan, Thread server");
 		}
 	}
 
@@ -1441,7 +1401,7 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 		/* Initialize throughput test. This does connection parameters configurations. */
 		ret = ot_throughput_test_init(is_ot_client);
 		if (ret != 0) {
-			LOG_ERR("Failed to OT throughput init: %d", ret);
+			LOG_ERR("Failed to Thread throughput init: %d", ret);
 			/* no meaning in running the coex test and checking the results */
 			return ret;
 		}
@@ -1450,7 +1410,7 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 	repeat_wifi_scan = 1;
 
 	if (test_thread) {
-		/** In case of client, start OT traffic for OT_TEST_DURATION.
+		/** In case of client, start Thread traffic for OT_TEST_DURATION.
 		 * In case of server, peer device begins the traffic.
 		 */
 		if (is_ot_client) {
@@ -1460,11 +1420,11 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 			test_start_time = k_uptime_get_32();
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
-				/* Peer OT starts the the test. */
-				LOG_INF("Run OT client on peer");
+				/* Peer Thread starts the the test. */
+				LOG_INF("Run Thread client on peer");
 				k_sleep(K_SECONDS(1));
 			}
 			wait4_peer_ot2_start_connection = 0;
@@ -1483,11 +1443,11 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 
 	if (test_thread) {
 		if (is_ot_client) {
-			/* Run OT activity and wait for test duration */
+			/* Run Thread activity and wait for test duration */
 			run_ot_activity();
 			ot_throughput_test_exit();
 		} else {
-			/** If OT is server, peer OT runs the activity.
+			/** If Thread is server, peer Thread runs the activity.
 			 * Wait for the test duration.
 			 */
 			while (1) {
@@ -1529,13 +1489,13 @@ int wifi_con_ot_discov(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, b
 	int ret = 0;
 	uint64_t test_start_time = 0;
 	/* Wi-Fi client/server role has no meaning in the Wi-Fi connection. */
-	/* OT client/server role has no meaning in the OT connection. */
+	/* Thread client/server role has no meaning in the Thread connection. */
 	bool is_wifi_server = false;
 	
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_con_ot_disc, OT client");
+		LOG_INF("Test case: wifi_con_ot_disc, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_con_ot_disc, OT server");
+		LOG_INF("Test case: wifi_con_ot_disc, Thread server");
 	}
 
 
@@ -1548,21 +1508,21 @@ int wifi_con_ot_discov(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, b
 	}
 
 	if (test_thread) {
-		/* Initialize OT by selecting role and connect it to peer device. */
+		/* Initialize Thread by selecting role and connect it to peer device. */
 		ot_discov_attempt_cnt++;
 		ot_initialization();
 		k_sleep(K_SECONDS(3));
 
 		if (is_ot_client) {
-			/**If OT is client, disconnect the connection.
+			/**If Thread is client, disconnect the connection.
 			 * Connection and disconnection happens in loop later.
 			 */
 			//ot_disconnection_attempt_cnt++;
 			//ot_disconnect_client();
 		} 
-		/* OT client/server role has no meaning in the OT connection. */
+		/* Thread client/server role has no meaning in the Thread connection. */
 		//else {
-		//	/**If OT is server, wait until peer OT client
+		//	/**If Thread is server, wait until peer Thread client
 		//	 *  initiates the connection, DUT is connected to peer client
 		//	 *  and update the PHY parameters.
 		//	 */
@@ -1578,13 +1538,13 @@ int wifi_con_ot_discov(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, b
 	if (test_thread) {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 		/* peer client waits on this in automation */
-		LOG_INF("Run OT client");
+		LOG_INF("Run Thread client");
 		k_sleep(K_SECONDS(1));
 #endif
 
 		//if (!is_ot_client) {
 		//	LOG_INF("DUT is in server role.");
-		//	LOG_INF("Check for OT connection counts on peer OT side.");
+		//	LOG_INF("Check for Thread connection counts on peer Thread side.");
 		//}
 	}
 
@@ -1599,26 +1559,26 @@ int wifi_con_ot_discov(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, b
 		start_wifi_activity();
 	}
 
-	/* Begin OT discovery for a period of OT test duration */
+	/* Begin Thread discovery for a period of Thread test duration */
 	if (test_thread) {
 		if (is_ot_client) {
 			start_ot_activity();
 		} 
-		/* OT client/server role has no meaning in the OT connection. */	
+		/* Thread client/server role has no meaning in the Thread connection. */	
 		//else {
-		//	/* If DUT OT is server then the peer starts the activity. */
+		//	/* If DUT Thread is server then the peer starts the activity. */
 		//}
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* Run OT activity and wait for the test duration */
+			/* Run Thread activity and wait for the test duration */
 			run_ot_activity();
 		}
-		/* OT client/server role has no meaning in the OT connection. */		
+		/* Thread client/server role has no meaning in the Thread connection. */		
 		//else {
-		//	/** If DUT OT is in server role then peer OT runs the activity.
+		//	/** If DUT Thread is in server role then peer Thread runs the activity.
 		//	 *wait for test duration
 		//	 */
 		//	while (1) {
@@ -1679,9 +1639,9 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 	bool is_wifi_server = false;
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_con_ot_tput, OT client");
+		LOG_INF("Test case: wifi_con_ot_tput, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_con_ot_tput, OT server");
+		LOG_INF("Test case: wifi_con_ot_tput, Thread server");
 	}
 
 	LOG_INF("test_wifi = %d", test_wifi);
@@ -1698,7 +1658,7 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 	if (test_thread) {
 		ret = ot_throughput_test_init(is_ot_client);
 		if (ret != 0) {
-			LOG_ERR("Failed to OT throughput init: %d", ret);
+			LOG_ERR("Failed to Thread throughput init: %d", ret);
 			return ret;
 		}
 	}
@@ -1713,18 +1673,18 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 	}
 
 	if (test_thread) {
-		/** Start OT traffic for OT_TEST_DURATION. In case of server,
+		/** Start Thread traffic for OT_TEST_DURATION. In case of server,
 		 *peer device begins traffic, this is a dummy function
 		 */
 		if (is_ot_client) {
 			test_start_time = k_uptime_get_32();
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
-				/* Peer OT starts the the test. */
-				LOG_INF("Run OT client on peer");
+				/* Peer Thread starts the the test. */
+				LOG_INF("Run Thread client on peer");
 				k_sleep(K_SECONDS(1));
 			}
 			wait4_peer_ot2_start_connection = 0;
@@ -1737,12 +1697,12 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 		}
 
 		if (is_ot_client) {
-			/* Run OT activity and wait for test duration */
+			/* Run Thread activity and wait for test duration */
 			run_ot_activity();
 			ot_throughput_test_exit();
 		} else {
-			/** If OT is server then peer runs the OT activity.
-			 *wait for OT test to complete.
+			/** If Thread is server then peer runs the Thread activity.
+			 *wait for Thread test to complete.
 			 */
 			while (1) {
 				if ((k_uptime_get_32() - test_start_time) >
@@ -1840,14 +1800,14 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_thread, bool is_ot_client,
 #endif/* CONFIG_NRF700X_BT_COEX */
 	}
 	if (test_thread) {
-		/* Initialize OT */
+		/* Initialize Thread */
 		//ot_discov_attempt_cnt++;
 		ot_initialization();
 		k_sleep(K_SECONDS(3)); /* B4 start. not in loop. no need to reduce */
 		if (is_ot_client) {
 			/* nothing */
 		} else {
-			/**If OT is server, wait until peer OT client
+			/**If Thread is server, wait until peer Thread client
 			 * initiates the connection, DUT is connected to peer client
 			 *and update the PHY parameters.
 			 */
@@ -1867,8 +1827,8 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_thread, bool is_ot_client,
 			if (test_wifi && test_thread) {
 				#ifdef CONFIG_PRINTS_FOR_AUTOMATION
 				while (!run_ot_client_wait_in_conn) {
-						/* Peer OT starts the the test. */
-						LOG_INF("Run OT client on peer");
+						/* Peer Thread starts the the test. */
+						LOG_INF("Run Thread client on peer");
 						k_sleep(K_SECONDS(1));
 				}
 				run_ot_client_wait_in_conn = 0;
@@ -1881,7 +1841,7 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_thread, bool is_ot_client,
 	LOG_INF("-------------------------start");
 	#endif
 
-	/* Begin OT conections and disconnections for a period of OT test duration */
+	/* Begin Thread conections and disconnections for a period of Thread test duration */
 	if (test_wifi) {
 		if (is_wifi_zperf_udp) {
 			ret = run_wifi_traffic_udp();
@@ -1897,7 +1857,7 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_thread, bool is_ot_client,
 		if (is_wifi_server) {
 			while (!wait4_peer_wifi_client_to_start_tp_test) {
 				#ifdef CONFIG_PRINTS_FOR_AUTOMATION
-				LOG_INF("start WiFi client on peer");
+				LOG_INF("start Wi-Fi client on peer");
 				#endif
 				k_sleep(K_SECONDS(1));
 			}
@@ -1911,17 +1871,17 @@ int wifi_tput_ot_discov(bool test_wifi, bool test_thread, bool is_ot_client,
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 		}
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* run OT activity and wait for the test duration */
+			/* run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} else {
-			/** If DUT OT is in server role, peer OT runs the test.
+			/** If DUT Thread is in server role, peer Thread runs the test.
 			 *wait for test duration.
 			 */
 			while (1) {
@@ -1980,32 +1940,32 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 		if (is_wifi_server) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case: wifi_tput_ot_connection");
-				LOG_INF("OT client, Wi-Fi UDP server");
+				LOG_INF("Thread client, Wi-Fi UDP server");
 			} else {
-				LOG_INF("OT client, Wi-Fi TCP server");
+				LOG_INF("Thread client, Wi-Fi TCP server");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case: wifi_tput_ot_connection");
-				LOG_INF("OT client, Wi-Fi UDP client");
+				LOG_INF("Thread client, Wi-Fi UDP client");
 			} else {
-				LOG_INF("OT client, Wi-Fi TCP client");
+				LOG_INF("Thread client, Wi-Fi TCP client");
 			}
 		}
 	} else {
 		if (is_wifi_server) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case: wifi_tput_ot_connection");
-				LOG_INF("OT server, Wi-Fi UDP server");
+				LOG_INF("Thread server, Wi-Fi UDP server");
 			} else {
-				LOG_INF("OT server, Wi-Fi TCP server");
+				LOG_INF("Thread server, Wi-Fi TCP server");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case: wifi_tput_ot_connection");
-				LOG_INF("OT server, Wi-Fi UDP client");
+				LOG_INF("Thread server, Wi-Fi UDP client");
 			} else {
-				LOG_INF("OT server, Wi-Fi TCP client");
+				LOG_INF("Thread server, Wi-Fi TCP client");
 			}
 		}
 	}
@@ -2026,19 +1986,19 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 		#endif/* CONFIG_NRF700X_BT_COEX */
 	}
 	if (test_thread) {
-		/* Initialize OT by selecting role and connect it to peer device. */
+		/* Initialize Thread by selecting role and connect it to peer device. */
 		//ot_connection_attempt_cnt++;
 		ot_connection_init(is_ot_client);
 		k_sleep(K_SECONDS(3)); /* B4 start. not in loop. no need to reduce */
 		if (is_ot_client) {
-			/** If OT is client, disconnect the connection.
+			/** If Thread is client, disconnect the connection.
 			 *Connection and disconnection happens in loop later.
 			 */
 			//ot_disconnection_attempt_cnt++;
 			//ot_disconnect_client();
 			//k_sleep(K_SECONDS(2));
 		} else {
-			/**If OT is server, wait until peer OT client
+			/**If Thread is server, wait until peer Thread client
 			 * initiates the connection, DUT is connected to peer client
 			 *and update the PHY parameters.
 			 */
@@ -2058,8 +2018,8 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 			if (test_wifi && test_thread) {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 				while (!run_ot_client_wait_in_conn) {
-					/* Peer OT starts the the test. */
-					LOG_INF("Run OT client on peer");
+					/* Peer Thread starts the the test. */
+					LOG_INF("Run Thread client on peer");
 					k_sleep(K_SECONDS(1));
 				}
 				run_ot_client_wait_in_conn = 0;
@@ -2071,7 +2031,7 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 	LOG_INF("-------------------------start");
 #endif
 
-	/* Begin OT conections and disconnections for a period of OT test duration */
+	/* Begin Thread conections and disconnections for a period of Thread test duration */
 	if (test_wifi) {
 		if (is_wifi_zperf_udp) {
 			ret = run_wifi_traffic_udp();
@@ -2087,7 +2047,7 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 		if (is_wifi_server) {
 			while (!wait4_peer_wifi_client_to_start_tp_test) {
 				#ifdef CONFIG_PRINTS_FOR_AUTOMATION
-				LOG_INF("start WiFi client on peer");
+				LOG_INF("start Wi-Fi client on peer");
 				#endif
 				k_sleep(K_SECONDS(1));
 			}
@@ -2099,17 +2059,17 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 		}
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* run OT activity and wait for the test duration */
+			/* run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} else {
-			/** If DUT OT is in server role, peer OT runs the test.
+			/** If DUT Thread is in server role, peer Thread runs the test.
 			 *wait for test duration.
 			 */
 			while (1) {
@@ -2156,7 +2116,7 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 			ot_disconnection_fail_cnt);
 		LOG_INF("ot_discon_no_conn_cnt = %u", ot_discon_no_conn_cnt);
 		} //else {
-			/* counts for server case are printed on peer OT */
+			/* counts for server case are printed on peer Thread */
 		//}
 #endif
 
@@ -2172,34 +2132,34 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		if (is_wifi_server) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT client, Wi-Fi UDP server");
+				LOG_INF(" Thread client, Wi-Fi UDP server");
 			} else {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT client, Wi-Fi TCP server");
+				LOG_INF(" Thread client, Wi-Fi TCP server");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT client, Wi-Fi UDP client");
+				LOG_INF(" Thread client, Wi-Fi UDP client");
 			} else {
-				LOG_INF(" OT client, Wi-Fi TCP client");
+				LOG_INF(" Thread client, Wi-Fi TCP client");
 			}
 		}
 	} else {
 		if (is_wifi_server) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT server, Wi-Fi UDP server");
+				LOG_INF(" Thread server, Wi-Fi UDP server");
 			} else {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT server, Wi-Fi TCP server");
+				LOG_INF(" Thread server, Wi-Fi TCP server");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF(" Test case: wifi_tput_ot_tput");
-				LOG_INF(" OT server, Wi-Fi UDP client");
+				LOG_INF(" Thread server, Wi-Fi UDP client");
 			} else {
-				LOG_INF(" OT server, Wi-Fi TCP client");
+				LOG_INF(" Thread server, Wi-Fi TCP client");
 			}
 		}
 	}
@@ -2236,7 +2196,8 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 			LOG_INF("Establishing TWT flow: success\n");
 		}
 		LOG_INF("Waiting for TWT response");
-		if (wait_for_twt_resp_received()) {
+		ret = wait_for_twt_resp_received()
+		if (ret) {
 			LOG_INF("TWT resp received. TWT Setup success");
 		} else {
 			LOG_ERR("TWT resp NOT received. TWT Setup timed out\n");
@@ -2245,12 +2206,12 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 #endif
 	if (test_thread) {
 		if (!is_ot_client) {
-			LOG_INF("Make sure peer OT role is client");
+			LOG_INF("Make sure peer Thread role is client");
 			k_sleep(K_SECONDS(3));
 		}
 		ret = ot_throughput_test_init(is_ot_client);
 		if (ret != 0) {
-			LOG_ERR("Failed to OT throughput init: %d", ret);
+			LOG_ERR("Failed to Thread throughput init: %d", ret);
 			return ret;
 		}
 		
@@ -2261,8 +2222,8 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 				if (test_wifi && test_thread) {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 					while (!wait4_peer_ot2_start_connection) {
-						/* Peer OT starts the the test. */
-						LOG_INF("Run OT client on peer");
+						/* Peer Thread starts the the test. */
+						LOG_INF("Run Thread client on peer");
 						k_sleep(K_SECONDS(1));
 					}
 					wait4_peer_ot2_start_connection = 0;
@@ -2293,7 +2254,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		if (is_wifi_server) {
 			while (!wait4_peer_wifi_client_to_start_tp_test) {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
-				LOG_INF("start WiFi client on peer");
+				LOG_INF("start Wi-Fi client on peer");
 #endif
 				k_sleep(K_SECONDS(1));
 			}
@@ -2311,7 +2272,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 			while (true) {
 				if ((k_uptime_get_32() - test_start_time) >
 					CONFIG_COEX_TEST_DURATION) {
@@ -2328,10 +2289,10 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 
 	if (test_thread) {
 		if (is_ot_client) {
-			/* run OT activity and wait for the test duration */
+			/* run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} else {
-			/* Peer OT that acts as client runs the traffic. */
+			/* Peer Thread that acts as client runs the traffic. */
 		}
 	}
 
@@ -2367,13 +2328,13 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 	uint64_t test_start_time = 0;
 	uint32_t wifi_con_intact_cnt = 0;
 	/* Wi-Fi client/server role has no meaning in the Wi-Fi connection. */
-	/* OT client/server role has no meaning in the OT discovery. */
+	/* Thread client/server role has no meaning in the Thread discovery. */
 	bool is_wifi_server = false;
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_con_stability_ot_discov_interference, OT client");
+		LOG_INF("Test case: wifi_con_stability_ot_discov_interference, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_con_stability_ot_discov_interference, OT server");
+		LOG_INF("Test case: wifi_con_stability_ot_discov_interference, Thread server");
 	}
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
@@ -2392,7 +2353,7 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 	}
 
 	if (test_thread) {
-		/* Initialize OT by selecting role and connect it to peer device. */
+		/* Initialize Thread by selecting role and connect it to peer device. */
 		ot_discov_attempt_cnt++;
 		ot_initialization();
 		k_sleep(K_SECONDS(3));
@@ -2404,7 +2365,7 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 		test_start_time = k_uptime_get_32();
 	}
 
-	/* OT only and Wi-Fi+OT tests : Start OT interference */
+	/* Thread only and Wi-Fi+Thread tests : Start Thread interference */
 	if (test_thread) {
 		if (is_ot_client) {
 			#ifdef DEMARCATE_TEST_START
@@ -2427,10 +2388,10 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 		}
 	}
 
-	/* OT only and Wi-Fi+OT tests  */
+	/* Thread only and Wi-Fi+Thread tests  */
 	if (test_thread) {
 		if (is_ot_client) {
-			/* Run OT activity and wait for the test duration */
+			/* Run Thread activity and wait for the test duration */
 			run_ot_activity();
 		} 
 	}
@@ -2466,7 +2427,7 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 		LOG_INF("ot_discov_timeout = %u",	ot_discov_timeout); // this can be commented. as ot_discov_no_result_cnt is available.
 		#endif
 		LOG_INF("ot_discov_no_result_cnt = %u",	ot_discov_no_result_cnt);
-		LOG_INF(" Note: OT counts can be ignored as this just acts as interference.");
+		LOG_INF(" Note: Thread counts can be ignored as this just acts as interference.");
 	}
 	if (test_wifi) {
 		LOG_INF("wifi_conn_attempt_cnt = %u", wifi_conn_attempt_cnt);
@@ -2491,9 +2452,9 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 	bool is_wifi_server = false;
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_con_stability_ot_tput_interference, OT client");
+		LOG_INF("Test case: wifi_con_stability_ot_tput_interference, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_con_stability_ot_tput_interference, OT server");
+		LOG_INF("Test case: wifi_con_stability_ot_tput_interference, Thread server");
 	}
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
@@ -2513,7 +2474,7 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 
 	if (test_thread) {
 		if (!is_ot_client) {
-			LOG_INF("Make sure peer OT role is client");
+			LOG_INF("Make sure peer Thread role is client");
 			k_sleep(K_SECONDS(3));
 		}
 	}
@@ -2521,7 +2482,7 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 	if (test_thread) {
 		ret = ot_throughput_test_init(is_ot_client);
 		if (ret != 0) {
-			LOG_ERR("Failed to OT throughput init: %d", ret);
+			LOG_ERR("Failed to Thread throughput init: %d", ret);
 			return ret;
 		}
 	}
@@ -2529,7 +2490,7 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 		LOG_INF("-------------------------start");
 		test_start_time = k_uptime_get_32();
 	}
-	/* OT only and Wi-Fi+OT tests : Start OT interference */
+	/* Thread only and Wi-Fi+Thread tests : Start Thread interference */
 	if (test_thread) {
 		if (is_ot_client) {
 #ifdef DEMARCATE_TEST_START
@@ -2539,11 +2500,11 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 
 			start_ot_activity();
 		} else {
-			/* If DUT OT is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer starts the activity. */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
-				/* Peer OT starts the the test. */
-				LOG_INF("Run OT client on peer");
+				/* Peer Thread starts the the test. */
+				LOG_INF("Run Thread client on peer");
 				k_sleep(K_SECONDS(1));
 			}
 			wait4_peer_ot2_start_connection = 0;
@@ -2566,7 +2527,7 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 		}
 	}
 
-	/* OT only and Wi-Fi+OT tests  */
+	/* Thread only and Wi-Fi+Thread tests  */
 	if (test_thread) {
 		if (is_ot_client) {
 			/* run and wait for the test duration */
@@ -2580,7 +2541,7 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 				}
 				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
 			}
-			/* Peer OT does the disconnects in the case of server */
+			/* Peer Thread does the disconnects in the case of server */
 		}
 	}
 
@@ -2605,8 +2566,8 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 		LOG_INF("wifi_conn_success_cnt = %u", wifi_conn_success_cnt);
 		LOG_INF("wifi_con_intact_cnt = %llu", wifi_con_intact_cnt);
 
-		LOG_INF("OT throughput results may be ignored.");
-		LOG_INF("That provides information on whether OT acted as interference");
+		LOG_INF("Thread throughput results may be ignored.");
+		LOG_INF("That provides information on whether Thread acted as interference");
 	}
 #endif
 
@@ -2625,30 +2586,30 @@ int ot_con_stability_wifi_scan_interference(bool is_ant_mode_sep, bool test_thre
 	if (is_ot_client) {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: ot_con_stability_wifi_scan_interference");
-			LOG_INF("OT client, Wi-Fi connected scan");
+			LOG_INF("Thread client, Wi-Fi connected scan");
 		} else {
 			LOG_INF("Test case: ot_con_stability_wifi_scan_interference");
-			LOG_INF("OT client, Wi-Fi scan");
+			LOG_INF("Thread client, Wi-Fi scan");
 		}
 	} else {
 		if (is_wifi_conn_scan) {
 			LOG_INF("Test case: ot_con_stability_wifi_scan_interference");
-			LOG_INF("OT client, Wi-Fi connected scan");
+			LOG_INF("Thread client, Wi-Fi connected scan");
 		} else {
 			LOG_INF("Test case: ot_con_stability_wifi_scan_interference");
-			LOG_INF("OT server, Wi-Fi scan");
+			LOG_INF("Thread server, Wi-Fi scan");
 		}
 	}
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
 	//print_ot_connection_test_params(is_ot_client);
 
-	/* one time OT connection */
+	/* one time Thread connection */
 	if (test_thread) {
 		ot_connection_attempt_cnt++;
 			
 		/* start joining to the network with pre-shared key = FEDCBA9876543210 */
-		thread_start_joiner("FEDCBA9876543210");			
+		ot_start_joiner("FEDCBA9876543210");			
 		//}
 
 		//Note: with sleep of 2/3 seconds, not observing the issue of one success for 
@@ -2691,13 +2652,13 @@ int ot_con_stability_wifi_scan_interference(bool is_ant_mode_sep, bool test_thre
 		repeat_wifi_scan = 0;
 	}
 	LOG_INF("ot_client_connected: %d",ot_client_connected);
-	/* check OT connection status */
+	/* check Thread connection status */
 	if (test_thread) {
 		if (ot_client_connected) {
-			LOG_INF("OT Conn Intact");
+			LOG_INF("Thread Conn Intact");
 			ot_connection_intact_cnt++;
 		} else {
-			LOG_INF("OT disconnected");
+			LOG_INF("Thread disconnected");
 		}
 		ot_disconnect_client();
 		k_sleep(K_SECONDS(2));
@@ -2743,46 +2704,46 @@ int ot_connection_stability_wifi_tput_interference(bool test_wifi, bool test_thr
 		if (is_ot_client) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT client, Wi-Fi UDP server");
+				LOG_INF("Thread client, Wi-Fi UDP server");
 			} else {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT client, Wi-Fi TCP server");
+				LOG_INF("Thread client, Wi-Fi TCP server");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT server, Wi-Fi UDP server");
+				LOG_INF("Thread server, Wi-Fi UDP server");
 			} else {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT server, Wi-Fi TCP server");
+				LOG_INF("Thread server, Wi-Fi TCP server");
 			}
 		}
 	} else {
 		if (is_ot_client) {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT client, Wi-Fi UDP client");
+				LOG_INF("Thread client, Wi-Fi UDP client");
 			} else {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT client, Wi-Fi TCP client");
+				LOG_INF("Thread client, Wi-Fi TCP client");
 			}
 		} else {
 			if (is_wifi_zperf_udp) {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT server, Wi-Fi UDP client");
+				LOG_INF("Thread server, Wi-Fi UDP client");
 			} else {
 				LOG_INF("Test case:	ot_connection_stability_wifi_tput_interference");
-				LOG_INF("OT server, Wi-Fi TCP client");
+				LOG_INF("Thread server, Wi-Fi TCP client");
 			}
 		}
 	} 
 
-	/* one time OT connection */
+	/* one time Thread connection */
 	if (test_thread) {
 		ot_connection_attempt_cnt++;
 			
 		/* start joining to the network with pre-shared key = FEDCBA9876543210 */
-		thread_start_joiner("FEDCBA9876543210");			
+		ot_start_joiner("FEDCBA9876543210");			
 		//}
 
 		//Note: with sleep of 2/3 seconds, not observing the issue of one success for 
@@ -2822,7 +2783,7 @@ int ot_connection_stability_wifi_tput_interference(bool test_wifi, bool test_thr
 		if (is_wifi_server) {
 			while (!wait4_peer_wifi_client_to_start_tp_test) {
 				#ifdef CONFIG_PRINTS_FOR_AUTOMATION
-				LOG_INF("start WiFi client on peer");
+				LOG_INF("start Wi-Fi client on peer");
 				#endif
 				k_sleep(K_SECONDS(1));
 			}
@@ -2835,8 +2796,8 @@ int ot_connection_stability_wifi_tput_interference(bool test_wifi, bool test_thr
 	#endif
 	test_start_time = k_uptime_get_32();
 
-	/* OT only case    : continue until test duration is complete */
-	/* OT + Wi-Fi cases: continue Wi-Fi interference until test duration is complete */
+	/* Thread only case    : continue until test duration is complete */
+	/* Thread + Wi-Fi cases: continue Wi-Fi interference until test duration is complete */
 	if (test_thread) {
 		while (true) {
 			if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {
@@ -2851,13 +2812,13 @@ int ot_connection_stability_wifi_tput_interference(bool test_wifi, bool test_thr
 		wifi_disconnection();
 	}
 
-	/* check OT connection status */
+	/* check Thread connection status */
 	if (test_thread) {
 		if (ot_client_connected) {
-			LOG_INF("OT Conn Intact");
+			LOG_INF("Thread Conn Intact");
 			ot_connection_intact_cnt++;
 		} else {
-			LOG_INF("OT disconnected");
+			LOG_INF("Thread disconnected");
 		}
 		ot_disconnect_client();
 		k_sleep(K_SECONDS(2));
@@ -2889,39 +2850,39 @@ int wifi_shutdown_ot_discov(bool is_ot_client)
 	int ret = 0;
 	uint64_t test_start_time = 0;
 	bool ot_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
-	/* OT client/server role has no meaning in the OT discovery */
+	/* Thread client/server role has no meaning in the Thread discovery */
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_shutdown_ot_disc, OT client");
+		LOG_INF("Test case: wifi_shutdown_ot_disc, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_shutdown_ot_disc, OT server");
+		LOG_INF("Test case: wifi_shutdown_ot_disc, Thread server");
 	}
 
 	LOG_INF("Test duration in milliseconds: %d", CONFIG_COEX_TEST_DURATION);
 	if (ot_coex_enable) {
-		LOG_INF("OT posts requests to PTA");
+		LOG_INF("Thread posts requests to PTA");
 	} else {
-		LOG_INF("OT doesn't post requests to PTA");
+		LOG_INF("Thread doesn't post requests to PTA");
 	}
 
 	/* disable RPU i.e. Wi-Fi shutdown */
 	rpu_disable();
 
-	/* Initialize OT by selecting role and connect it to peer device. */
+	/* Initialize Thread by selecting role and connect it to peer device. */
 	ot_discov_attempt_cnt++;
 	ot_initialization();
 	k_sleep(K_SECONDS(3));
 
 	if (is_ot_client) {
-		/**If OT is client, disconnect the connection.
+		/**If Thread is client, disconnect the connection.
 		 * Connection and disconnection happens in loop later.
 		 */
 		//ot_disconnection_attempt_cnt++;
 		//ot_disconnect_client();
 	} 
-	//note: OT connection is done in default client role. 
+	//note: Thread connection is done in default client role. 
 	//else {
-	//	/**If OT is server, wait until peer OT client
+	//	/**If Thread is server, wait until peer Thread client
 	//	 *  initiates the connection, DUT is connected to peer client
 	//	 *  and update the PHY parameters.
 	//	 */
@@ -2937,13 +2898,13 @@ int wifi_shutdown_ot_discov(bool is_ot_client)
 
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 	/* peer client waits on this in automation */
-	LOG_INF("Run OT client");
+	LOG_INF("Run Thread client");
 	k_sleep(K_SECONDS(1));
 #endif
 
 	//if (!is_ot_client) {
 	//	LOG_INF("DUT is in server role.");
-	//	LOG_INF("Check for OT connection counts on peer OT side.");
+	//	LOG_INF("Check for Thread connection counts on peer Thread side.");
 	//}
 
 
@@ -2953,19 +2914,19 @@ int wifi_shutdown_ot_discov(bool is_ot_client)
 	repeat_ot_discovery = 1;
 	test_start_time = k_uptime_get_32();
 
-	/* Begin OT discovery for a period of OT test duration */
+	/* Begin Thread discovery for a period of Thread test duration */
 	if (is_ot_client) {
 		start_ot_activity();
 	} else {
-		/* If DUT OT is server then the peer starts the activity. */
+		/* If DUT Thread is server then the peer starts the activity. */
 	}
 
-	/* Wait for OT activity completion i.e., for test duration */
+	/* Wait for Thread activity completion i.e., for test duration */
 	if (is_ot_client) {
-		/* Run OT activity and wait for the test duration */
+		/* Run Thread activity and wait for the test duration */
 		run_ot_activity();
 	} else {
-		/** If DUT OT is in server role then peer OT runs the activity.
+		/** If DUT Thread is in server role then peer Thread runs the activity.
 		 *wait for test duration
 		 */
 		while (1) {
@@ -3008,36 +2969,36 @@ int wifi_shutdown_ot_connection(bool is_ot_client)
 	bool ot_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_shutdown_ot_connection, OT client");
+		LOG_INF("Test case: wifi_shutdown_ot_connection, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_shutdown_ot_connection, OT server");
+		LOG_INF("Test case: wifi_shutdown_ot_connection, Thread server");
 	}
 
 	LOG_INF("Test duration in milliseconds: %d", CONFIG_COEX_TEST_DURATION);
 	if (ot_coex_enable) {
-		LOG_INF("OT posts requests to PTA");
+		LOG_INF("Thread posts requests to PTA");
 	} else {
-		LOG_INF("OT doesn't post requests to PTA");
+		LOG_INF("Thread doesn't post requests to PTA");
 	}
 
 	/* disable RPU i.e. Wi-Fi shutdown */
 	rpu_disable();
 	//print_ot_connection_test_params(is_ot_client);
 
-	/* OT onetime connection */
-	/* Initialize OT by selecting role and connect it to peer device. */
+	/* Thread onetime connection */
+	/* Initialize Thread by selecting role and connect it to peer device. */
 	ot_discov_attempt_cnt++;
 	ot_connection_init(is_ot_client);
 	k_sleep(K_SECONDS(2));
 	if (is_ot_client) {
-		/** If OT is client, disconnect the connection.
+		/** If Thread is client, disconnect the connection.
 		 *Connection and disconnection happens in loop later.
 		 */
 		ot_disconnection_attempt_cnt++;
 		ot_disconnect_client();
 		k_sleep(K_SECONDS(2));
 	} else {
-		/**If OT is server, wait until peer OT client
+		/**If Thread is server, wait until peer Thread client
 		 * initiates the connection, DUT is connected to peer client
 		 * and update the PHY parameters.
 		 */
@@ -3051,12 +3012,12 @@ int wifi_shutdown_ot_connection(bool is_ot_client)
 
 	#ifdef CONFIG_PRINTS_FOR_AUTOMATION
 		/* peer client waits on this in automation */
-		LOG_INF("Run OT client");
+		LOG_INF("Run Thread client");
 	#endif
 
 	if (!is_ot_client) {
 		LOG_INF("DUT is in server role.");
-		LOG_INF("Check for OT connection counts on peer OT side");
+		LOG_INF("Check for Thread connection counts on peer Thread side");
 	}
 
 	#ifdef DEMARCATE_TEST_START
@@ -3065,19 +3026,19 @@ int wifi_shutdown_ot_connection(bool is_ot_client)
 
 	test_start_time = k_uptime_get_32();
 
-	/* Begin OT conections and disconnections for a period of OT test duration */
+	/* Begin Thread conections and disconnections for a period of Thread test duration */
 
 	if (is_ot_client) {
 		start_ot_activity();
 	} else {
-		/* If DUT OT is server then the peer starts the activity. */
+		/* If DUT Thread is server then the peer starts the activity. */
 	}
 
 	if (is_ot_client) {
 		/* run and wait for the test duration */
 		run_ot_activity();
 	} else {
-		/** If DUT OT is in server role then peer runs the activity.
+		/** If DUT Thread is in server role then peer runs the activity.
 		 *wait for test duration
 		 */
 		while (1) {
@@ -3109,25 +3070,6 @@ int wifi_shutdown_ot_connection(bool is_ot_client)
 		ot_disconnection_fail_cnt);
 	LOG_INF("ot_discon_no_conn_cnt = %u",
 		ot_discon_no_conn_cnt);
-	//}
-	/* else {
-		LOG_INF("check peer device for result counts");
-		LOG_INF("Counts printed below are for information purpose and not actual results.");
-
-		LOG_INF("ot_datalen_failed = %u",
-			ot_datalen_failed);
-		LOG_INF("ot_phy_update_failed = %u",
-			ot_phy_update_failed);
-		LOG_INF("ot_datalen_timeout = %u",
-			ot_datalen_timeout);
-
-		LOG_INF("ot_phy_update_timeout = %u",
-			ot_phy_update_timeout);
-		LOG_INF("ot_conn_param_update_failed = %u",
-			ot_conn_param_update_failed);
-		LOG_INF("ot_conn_param_update_timeout = %u",
-			ot_conn_param_update_timeout);
-	} */
 	#endif
 
 	return 0;
@@ -3140,29 +3082,29 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	bool ot_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
 
 	if (is_ot_client) {
-		LOG_INF("Test case: wifi_shutdown_ot_tput, OT client");
+		LOG_INF("Test case: wifi_shutdown_ot_tput, Thread client");
 	} else {
-		LOG_INF("Test case: wifi_shutdown_ot_tput, OT server");
+		LOG_INF("Test case: wifi_shutdown_ot_tput, Thread server");
 	}
 
 	LOG_INF("Test duration in milliseconds: %d", CONFIG_COEX_TEST_DURATION);
 
 	if (ot_coex_enable) {
-		LOG_INF("OT posts requests to PTA");
+		LOG_INF("Thread posts requests to PTA");
 	} else {
-		LOG_INF("OT doesn't post requests to PTA");
+		LOG_INF("Thread doesn't post requests to PTA");
 	}
 
 	/* Disable RPU i.e. Wi-Fi shutdown */
 	rpu_disable();
 
 	if (!is_ot_client) {
-		LOG_INF("Make sure peer OT role is client");
+		LOG_INF("Make sure peer Thread role is client");
 		k_sleep(K_SECONDS(3));
 	}
 	ret = ot_throughput_test_init(is_ot_client);
 	if (ret != 0) {
-		LOG_ERR("Failed to OT throughput init: %d", ret);
+		LOG_ERR("Failed to Thread throughput init: %d", ret);
 		return ret;
 	}
 	
@@ -3171,8 +3113,8 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	} else {
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 		while (!wait4_peer_ot2_start_connection) {
-			/* Peer OT starts the the test. */
-			LOG_INF("Run OT client on peer");
+			/* Peer Thread starts the the test. */
+			LOG_INF("Run Thread client on peer");
 			k_sleep(K_SECONDS(1));
 		}
 		wait4_peer_ot2_start_connection = 0;
@@ -3189,14 +3131,14 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	if (is_ot_client) {
 		start_ot_activity();
 	} else {
-		/* If DUT OT is server then the peer starts the activity. */
+		/* If DUT Thread is server then the peer starts the activity. */
 	}
 
 	if (is_ot_client) {
-		/* run OT activity and wait for the test duration */
+		/* run Thread activity and wait for the test duration */
 		run_ot_activity();
 	} else {
-		/* If OT DUT is server then the peer runs activity. Wait for test duration */
+		/* If Thread DUT is server then the peer runs activity. Wait for test duration */
 		while (true) {
 			if ((k_uptime_get_32() - test_start_time) >
 				CONFIG_COEX_TEST_DURATION) {

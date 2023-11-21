@@ -4,24 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-/** @file
- * @brief Wi-Fi and Thread coexistence sample test bench
- */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-
 #include "main.h"
-#include <nrfx_clock.h>
-#include "fmac_main.h"
-#include <zephyr/logging/log.h>
-
-LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
-
-#define RSSI_INIT_VALUE 127
-#define TXPOWER_INIT_VALUE 127
 
 int main(void)
 {
@@ -56,15 +39,15 @@ int main(void)
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
-	#if defined(CONFIG_NRF700X_BT_COEX)
+#if defined(CONFIG_NRF700X_BT_COEX)
 		/* Configure SR side (nRF5340 side) switch in nRF7x */
-		LOG_INF("Configure SR side (nRF5340 side) switch");
+		LOG_INF("Configure SR side switch");
 		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep, ot_external_antenna);
 		if (ret != 0) {
 			LOG_ERR("Unable to configure SR side switch: %d", ret);
 			goto err;
 		}
-	#endif /* CONFIG_NRF700X_BT_COEX */
+#endif /* CONFIG_NRF700X_BT_COEX */
 #endif
 
 #if defined(CONFIG_NRF700X_BT_COEX)
@@ -177,19 +160,19 @@ int main(void)
 		goto err;
 	}
 	if (ot_tx_power != TXPOWER_INIT_VALUE) {
-		LOG_INF("OT Tx power: %d", ot_tx_power);
+		LOG_INF("Thread Tx power: %d", ot_tx_power);
 	} else {
-		LOG_INF("OT Tx power: N/A");
+		LOG_INF("Thread Tx power: N/A");
 	}
 	if (wifi_rssi != RSSI_INIT_VALUE) {
-		LOG_INF("WiFi RSSI: %d", wifi_rssi);
+		LOG_INF("Wi-Fi RSSI: %d", wifi_rssi);
 	} else {
-		LOG_INF("WiFi RSSI: N/A");
+		LOG_INF("Wi-Fi RSSI: N/A");
 	}
 	if (ot_rssi != RSSI_INIT_VALUE) {
-		LOG_INF("OT RSSI: %d", ot_rssi);
+		LOG_INF("Thread RSSI: %d", ot_rssi);
 	} else {
-		LOG_INF("OT RSSI: N/A");
+		LOG_INF("Thread RSSI: N/A");
 	}
 	LOG_INF("Test case(s) complete");
 
