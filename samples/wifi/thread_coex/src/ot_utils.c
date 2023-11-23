@@ -5,8 +5,11 @@
  */
 
 #include "ot_utils.h"
+#include "openthread/ping_sender.h"
+#include "zephyr/net/openthread.h"
 
 #include <zephyr/logging/log.h>
+#include <openthread/thread.h>
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if defined(CONFIG_WIFI_SCAN_OT_CONNECTION) || \
@@ -889,6 +892,24 @@ void ot_conn_test_run(void)
 		//k_sleep(K_SLEEP_DUR_FOR_OT_CONN); // ksleep already available above. So commenting this.
 #endif
 	}
+	{
+		LOG_INF("Starting openthread.");
+		openthread_api_mutex_lock(openthread_get_default_context());
+		otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+		if (err != OT_ERROR_NONE) {
+			LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		}
+		otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+		openthread_api_mutex_unlock(openthread_get_default_context());
+		while (current_role != OT_DEVICE_ROLE_CHILD) {
+			LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
+			k_sleep(K_MSEC(1000));
+			openthread_api_mutex_lock(openthread_get_default_context());
+			current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+			openthread_api_mutex_unlock(openthread_get_default_context());
+		}
+		get_peer_address();
+	}
 }
 //static const struct ot_throughput_cb throughput_cb = {
 //	.data_read = ot_throughput_read,
@@ -1336,7 +1357,7 @@ const char* ot_check_device_state()
 	return(otThreadDeviceRoleToString(current_role));
 }
 
-	
+
 int ot_device_disable(void)
 {
 	openthread_api_mutex_lock(openthread_get_default_context());
@@ -1346,3 +1367,22 @@ int ot_device_disable(void)
 	return 0;
 }
 
+void handle_ping_reply(const otPingSenderReply *reply, void *context) {
+    otIp6Address add = reply->mSenderAddress;
+    char string[OT_IP6_ADDRESS_STRING_SIZE];
+	otIp6AddressToString(&add, string, OT_IP6_ADDRESS_STRING_SIZE);
+	LOG_WRN("Reply received from: %s\n", string);
+}
+
+void get_peer_address() {
+	LOG_INF("Finding other devices...");
+    otPingSenderConfig config;
+    memset(&config, 0, sizeof(config));
+	config.mReplyCallback = handle_ping_reply;
+
+	const char *dest = "ff03::1";	// Mesh-Local anycast for all FTDs and MEDs
+	openthread_api_mutex_lock(openthread_get_default_context());
+	otIp6AddressFromString(dest, &config.mDestination);
+	otPingSenderPing(openthread_get_default_instance(), &config);
+	openthread_api_mutex_unlock(openthread_get_default_context());
+}

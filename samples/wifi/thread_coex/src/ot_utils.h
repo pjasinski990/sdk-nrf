@@ -192,4 +192,6 @@ void ot_stop_joiner(void);
  */
 void ot_setNullNetworkKey(otInstance *aInstance);
 
+void get_peer_address();
+
 #endif /* OT_UTILS_H_ */
