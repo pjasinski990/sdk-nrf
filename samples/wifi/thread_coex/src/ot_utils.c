@@ -10,6 +10,9 @@
 
 #include <zephyr/logging/log.h>
 #include <openthread/thread.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/shell/shell_uart.h>
+
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if defined(CONFIG_WIFI_SCAN_OT_CONNECTION) || \
@@ -908,7 +911,7 @@ void ot_conn_test_run(void)
 			current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 			openthread_api_mutex_unlock(openthread_get_default_context());
 		}
-		get_peer_address();
+		zperf_test();
 	}
 }
 //static const struct ot_throughput_cb throughput_cb = {
@@ -1367,14 +1370,26 @@ int ot_device_disable(void)
 	return 0;
 }
 
+#define ZPERF_DEFAULT_PORT 5001U
+typedef struct peer_address_info {
+	char address_string[OT_IP6_ADDRESS_STRING_SIZE];
+	bool address_found;
+} peer_address_info_t;
+
+peer_address_info_t peer_address_info  = {.address_found = false};
+
 void handle_ping_reply(const otPingSenderReply *reply, void *context) {
-    otIp6Address add = reply->mSenderAddress;
-    char string[OT_IP6_ADDRESS_STRING_SIZE];
+	otIp6Address add = reply->mSenderAddress;
+	char string[OT_IP6_ADDRESS_STRING_SIZE];
 	otIp6AddressToString(&add, string, OT_IP6_ADDRESS_STRING_SIZE);
 	LOG_WRN("Reply received from: %s\n", string);
+	if (!peer_address_info.address_found) {
+		strcpy(peer_address_info.address_string, string);
+		peer_address_info.address_found = true;
+	}
 }
 
-void get_peer_address() {
+void get_peer_address(uint64_t timeout_ms) {
 	LOG_INF("Finding other devices...");
     otPingSenderConfig config;
     memset(&config, 0, sizeof(config));
@@ -1385,4 +1400,30 @@ void get_peer_address() {
 	otIp6AddressFromString(dest, &config.mDestination);
 	otPingSenderPing(openthread_get_default_instance(), &config);
 	openthread_api_mutex_unlock(openthread_get_default_context());
+	uint64_t start_time = k_uptime_get();
+	while (!peer_address_info.address_found && k_uptime_get() < start_time + timeout_ms) {
+		k_sleep(K_MSEC(100));
+	}
+}
+
+void start_zperf_test_send(const char *peer_addr, uint32_t duration_sec, uint32_t packet_size_bytes, uint32_t rate_bps) {
+    const struct shell *shell = shell_backend_uart_get_ptr();
+    char cmd[128];
+
+    snprintf(cmd, sizeof(cmd), "zperf udp upload %s %u %u %u %u", peer_addr, ZPERF_DEFAULT_PORT, duration_sec, packet_size_bytes, rate_bps);
+    shell_execute_cmd(shell, cmd);
+}
+
+void start_zperf_test_recv() {
+    const struct shell *shell = shell_backend_uart_get_ptr();
+    shell_execute_cmd(shell, "zperf udp download");
+}
+
+void zperf_test() {
+	get_peer_address(5000);
+	if (!peer_address_info.address_found) {
+		LOG_WRN("Peer address not found. Not continuing with zperf test.");
+		return;
+	}
+	start_zperf_test_send(peer_address_info.address_string, 5, 256,1e4);
 }
